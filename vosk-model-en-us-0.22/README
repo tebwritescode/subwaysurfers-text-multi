@@ -1,7 +1,0 @@
-Accurate universal English model (both for callcenter and wideband)
-
-Based on Appen Kaldi model https://github.com/Appen/UHV-OTS-Speech
-
-Librispeech test-clean WER:  5.69%
-Tedlium WER:                 6.05%
-Callcenter WER:             29.78%
