@@ -2,4 +2,4 @@
 
 Takes input articles and converts them into mind-rotting Tiktok videos
 
-Download the Vosk model [here](https://alphacephei.com/vosk/models/vosk-model-en-us-0.22.zip)
+Here is the vosk model: [vosk-model-en-us-0.22.zip](https://alphacephei.com/vosk/models/vosk-model-en-us-0.22.zip)
