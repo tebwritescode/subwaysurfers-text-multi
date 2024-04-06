@@ -1,8 +1,9 @@
 from tiktokvoice import tts
+from pydub import AudioSegment
 import os
 
-text = "My name is"
-text2 = "daniel"
+
+text = input("Input text to play:: ")
 voice = "en_us_006"
 
 # arguments:
@@ -10,8 +11,9 @@ voice = "en_us_006"
 #   - vocie which is used for the audio
 #   - output file name
 #   - play sound after generating the audio
-tts(text, voice, "output1.mp3", play_sound=False)
-tts(text2, voice, "output2.mp3", play_sound=False)
+tts(text, voice, "output.mp3", play_sound=False)
 
-os.system("afplay output1.mp3")
-os.system("afplay output2.mp3")
+sound = AudioSegment.from_mp3("output.mp3")
+sound.export("output.wav", format="wav")
+
+
