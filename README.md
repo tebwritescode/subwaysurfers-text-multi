@@ -12,7 +12,9 @@ We used Python, HTML/CSS, Flask, OpenCV, goose3, Vosk API, and various other pyt
 ## How to use it
 
 There are a few things you need to do in order to successfully run our program.
+
 (1) Download this Subway Surfers background video and put it in the static folder: [surf.mp4](https://drive.google.com/file/d/1ZyFZKIB1HiZM_XDQPRRiiAIvU4sgl10k/view?usp=drive_link)
+
 (2) Download this vosk model: [vosk-model-en-us-0.22.zip](https://alphacephei.com/vosk/models/vosk-model-en-us-0.22.zip)\
 
 
