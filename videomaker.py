@@ -49,16 +49,11 @@ def create_video(words, timestamps, video_length):
         cv2.putText(frame, word, (300, 300), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
         output_video.write(frame)
 
-
-        
-
-
-
-
     # Release the video capture and writer objects
     video.release()
     output_video.release()
     cv2.destroyAllWindows()
+
 
 def generate_starttimestamp(video_length):
     return 1000000
