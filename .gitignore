@@ -1,2 +1,5 @@
 __pycache__
 output*
+static/surf.mp4
+.DS_Store
+static/.DS_Store
