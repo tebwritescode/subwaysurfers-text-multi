@@ -4,4 +4,4 @@ from videomaker import create_video
 texts = ['Text 1', 'Text 2', 'Text 3']
 timestamps = [2, 12, 25]  # timestamps
 
-create_video(texts, timestamps, 10)
+create_video(texts, timestamps, 30)
