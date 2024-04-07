@@ -1,38 +1,37 @@
-import os
-import sys
-import wave
-import json
+import os, sys, wave, json
 
 from vosk import Model, KaldiRecognizer, SetLogLevel
-# !pip install vosk
-import Word
 
-SetLogLevel(0)
+# Turn LOG messages on / off, 0 is on and -1 is off
+SetLogLevel(-1)
 
 # path to vosk model downloaded from
 # https://alphacephei.com/vosk/models
+# Currently using the 1.8Gb version
 model_path = "/Users/danielbonkowsky/Documents/vosk-model-en-us-0.22"
 
+# If model path doesn't work
 if not os.path.exists(model_path):
     print(f"Please download the model from https://alphacephei.com/vosk/models and unpack as {model_path}")
     sys.exit()
 
-print(f"Reading your vosk model '{model_path}'...")
+# Reading the vosk model
 model = Model(model_path)
-print(f"'{model_path}' model was successfully read")
 
 # name of the audio file to recognize
 audio_filename = "output.wav"
+
 # name of the text file to write recognized text
 text_filename = "output.txt"
 
+# If audio file doesn't exist
 if not os.path.exists(audio_filename):
     print(f"File '{audio_filename}' doesn't exist")
     sys.exit()
 
-print(f"Reading your file '{audio_filename}'...")
+
+# Reading the audio file
 wf = wave.open(audio_filename, "rb")
-print(f"'{audio_filename}' file was successfully read")
 
 # check if audio is mono wav
 if wf.getnchannels() != 1 or wf.getsampwidth() != 2 or wf.getcomptype() != "NONE":
@@ -56,18 +55,18 @@ while True:
 part_result = json.loads(rec.FinalResult())
 results.append(part_result)
 
-# convert list of JSON dictionaries to list of 'Word' objects
+words = []
+end_times = []
 
-list_of_words = []
 for sentence in results:
     if len(sentence) == 1:
         # sometimes there are bugs in recognition 
         # and it returns an empty dictionary
         # {'text': ''}
         continue
-    for obj in sentence['result']:
-        w = Word.Word(obj)  # create custom Word object
-        list_of_words.append(w)  # and add it to list
+    for obj in sentence["result"]:
+        words.append(obj["word"])
+        end_times.append(obj["end"])
 
-for word in list_of_words:
-    print(word.to_string())
+print(words)
+print(end_times)
