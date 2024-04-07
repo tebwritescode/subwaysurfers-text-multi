@@ -32,7 +32,7 @@ The local server should work on Safari, Chrome, and Firefox browsers.
 
 4. Install `brew` dependencies:
    ```
-   xargs brew install < my_brew.txt
+   xargs brew install < requirements-brew.txt
    ```
 
 5. Download the Subway Surfers [background gameplay](https://drive.google.com/file/d/1ZyFZKIB1HiZM_XDQPRRiiAIvU4sgl10k/view?usp=drive_link), title it `surf.mp4` and place it in the `static` folder of your local repository. 
