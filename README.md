@@ -51,5 +51,6 @@ The local server should work on Safari, Chrome, and Firefox browsers.
 
 3. Open the local server in your browser. 
 
-4. Paste a link to the article you want converted into the textbox, and press `<enter>`! The video takes a while to generate, but the terminal should show that the program is running. 
+4. Paste a link to the article you want converted into the textbox, and press `<enter>`! The video takes a while to generate, but the terminal should show that the program is running.
+   * If it asks you to override any files, override them. 
 
