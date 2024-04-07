@@ -12,17 +12,14 @@ def home():
 @app.route('/submit-form', methods=['POST'])
 def submit_form():
     text_input = request.form['text_input']
-    encoded_text_input = quote(text_input)
+    script(text_input)
     # Now, handle the text input as needed
     # For example, redirect to the video page
-    return redirect(url_for('output', _external=True) + f"?text_input={encoded_text_input}")
+    return redirect(url_for('output'))
 
 @app.route('/output', methods=['GET'])
 def output():    
-    text_input = request.args.get('text_input', default=None)
-    print(f"Received text input: {text_input}")
-    script(text_input)
-    file_path = 'output.mp4'
+    file_path = 'final.mp4'
     file_size = os.path.getsize(file_path)
     range_header = request.headers.get('Range', None)
 
