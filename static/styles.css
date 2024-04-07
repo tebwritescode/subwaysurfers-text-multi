@@ -36,3 +36,16 @@ h1{
     opacity: 1; /* Firefox */
   }
   
+#video-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh; /* Adjust the height as needed */
+}
+
+/* Set the video size */
+video {
+    max-width: 100%;
+    max-height: 100%;
+}
+
