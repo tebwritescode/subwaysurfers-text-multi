@@ -1,7 +1,7 @@
-from helpers import create_video
+from videomaker import create_video
 
 # Array of strings to overlay at different timestamps
 texts = ['Text 1', 'Text 2', 'Text 3']
-textlengths = [2, 5, 8]  # lengths
+timestamps = [5, 8, 10]  # timestamps
 
-create_video(texts, textlengths, 15)
+create_video(texts, timestamps, 10)
