@@ -1,3 +1,10 @@
 h1{
     color: red;
 }
+
+#indexbody {
+    background-image: url('mainpage.png');
+    background-position: center;
+    margin: 0; /* Remove default margin */
+    padding: 0; /* Remove default padding */
+}
