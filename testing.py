@@ -1,4 +1,4 @@
-from videomaker2 import create_video
+from videomaker import create_video
 from vosk_example import get_words_and_timestamps
 
 # Array of strings to overlay at different timestamps
@@ -10,4 +10,4 @@ INPUT_FILE = "output.wav"
 model_path = "/Users/danielbonkowsky/Documents/vosk-model-en-us-0.22"
 texts, timestamps = get_words_and_timestamps(model_path, INPUT_FILE)
 
-create_video(texts, timestamps, 10)
+create_video(texts, timestamps, 30)

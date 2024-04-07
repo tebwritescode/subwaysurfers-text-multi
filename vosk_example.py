@@ -6,8 +6,10 @@ path to vosk model downloaded from
 https://alphacephei.com/vosk/models
 Currently using the 1.8Gb version 
 """
+SetLogLevel(-1)
 
 def get_words_and_timestamps(model_path, audio):
+    SetLogLevel(-1)
     # If model path doesn't work
     if (not os.path.exists(model_path)):
         print(f"Please download the model from https://alphacephei.com/vosk/models and unpack as {model_path}")

@@ -9,8 +9,8 @@ two lists, one of words and other of ending timestamps
 #video_length should be the length of the template video file, should be in seconds
 def create_video(words, timestamps, video_length):
     # loading video file
-    input_video_path = 'static\\subway_surf.mp4'
-    output_video_path = 'static\\outputvid.mp4'
+    input_video_path = 'static/subway_surf.mp4'
+    output_video_path = 'static/outputvid.mp4'
     starttimestamp = generate_starttimestamp(video_length)
     video = cv2.VideoCapture(input_video_path)
     video.set(cv2.CAP_PROP_POS_MSEC, starttimestamp)
@@ -32,26 +32,30 @@ def create_video(words, timestamps, video_length):
     thickness = 4
 
     # Loop through all the words/timestamps
-    for i, (word, end_time) in enumerate(zip(words, timestamps)):
-        start_time = time.time()
-        while time.time() - start_time < end_time:
-            ret, frame = video.read()
-            if not ret:
-                break
+    framestamps = []
+    for time in timestamps:
+        framestamps.append(int(time * fps))
+    
+    word_num = 0
+    for i in range(video_length * fps):
+        if (i == framestamps[word_num] and word_num != len(words)-1):
+            word_num += 1
 
-            # Display the current word on the frame
-            cv2.putText(frame, word, (300, 300), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+        ret, frame = video.read()
+        if (not ret):
+            break
 
-            # Write the frame to the output video
-            output_video.write(frame)
+        word = words[word_num]
+        cv2.putText(frame, word, (300, 300), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+        output_video.write(frame)
 
     # Release the video capture and writer objects
     video.release()
     output_video.release()
     cv2.destroyAllWindows()
 
-def generate_starttimestamp(video_length):
-    return random.randint(360, 5000 - video_length) * 1000
 
+def generate_starttimestamp(video_length):
+    return 1000000
 
 
