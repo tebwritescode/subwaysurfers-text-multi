@@ -17,5 +17,4 @@ There are a few things you need to do in order to successfully run our program.
 
 (2) Download this vosk model: [vosk-model-en-us-0.22.zip](https://alphacephei.com/vosk/models/vosk-model-en-us-0.22.zip)\
 
-
-
+To start the server, just simply type "flask run" in the terminal and follow the link :)
