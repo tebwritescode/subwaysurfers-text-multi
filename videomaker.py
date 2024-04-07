@@ -32,6 +32,7 @@ def create_video(words, timestamps, video_length):
     thickness = 4
 
     # Loop through all the words/timestamps
+    """
     for i, (word, end_time) in enumerate(zip(words, timestamps)):
         start_time = time.time()
         while time.time() - start_time < end_time:
@@ -44,6 +45,13 @@ def create_video(words, timestamps, video_length):
 
             # Write the frame to the output video
             output_video.write(frame)
+    """
+
+    framestamps = []
+    for time in timestamps:
+        framestamps.append(time * fps)
+
+
 
     # Release the video capture and writer objects
     video.release()
