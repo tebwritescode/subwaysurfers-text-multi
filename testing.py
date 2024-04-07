@@ -1,6 +1,6 @@
 from videomaker import create_video
 from timestamper import get_words_and_timestamps
-from text_to_speech import generate_sound_files
+from text_to_speech import generate_wav
 from compression import compress_video
 import ffmpeg, os, audioread
 
@@ -11,7 +11,7 @@ VARIABLES
 """
 
 # Path to Vosk model used for word/timestamp processing
-MODEL_PATH = "/Users/gauri/Downloads/vosk-model-en-us-0.22"
+MODEL_PATH = "/Users/danielbonkowsky/Documents/vosk-model-en-us-0.22"
 
 # Subway surfers source video
 SOURCE_VIDEO = "static/surf.mp4"
@@ -23,10 +23,7 @@ WAV_FILE = "output.wav"
 MP3_FILE = "output.mp3"
 
 # .mp4 file created with captions overlayed on subway surfers
-CAPTION_BIG_VIDEO = "output_caption_big.mp4"
-
-# compressed caption video
-CAPTION_SMALL_VIDEO = "output_caption_small.mp4"
+CAPTION_VIDEO = "output_caption.mp4"
 
 # final output video (WAV_FILE + CAPTION_VIDEO)
 OUTPUT_VIDEO = "final.mp4"
