@@ -3,6 +3,7 @@ from timestamper import get_words_and_timestamps
 from text_to_speech import generate_wav
 from compression import compress_video
 import ffmpeg, os, audioread
+import time
 
 """
 
@@ -37,23 +38,30 @@ SCRIPT
 
 """
 def script(input_link):
+    start = time.time()
     # removes all old output files and final.mp4
     os.system(f"bash clean.sh {OUTPUT_VIDEO}")
+    print("All generated files removed")
 
     # generated the spoken version of the input article
     generate_wav(input_link, VOICE, WAV_FILE)
+    print("Audio file generated.")
 
     # gets the words spoken and their corresponding timestamps from the .wav file
     texts, timestamps = get_words_and_timestamps(MODEL_PATH, WAV_FILE)
+    print("Words and timestamps retrieved.")
 
     # gets the duration of the .wav file
     sound_duration = int(audioread.audio_open(WAV_FILE).duration)
 
     # generates the caption video from the subway surfers source and the words/timestamps
     create_video(texts, timestamps, sound_duration, SOURCE_VIDEO, CAPTION_VIDEO)
+    print("Captioned video generated.")
 
     # combines the sound and the caption video
     os.system(f"bash concat.sh {CAPTION_VIDEO} {WAV_FILE} {OUTPUT_VIDEO}")
+    print("Audio and video combined.")
+    print("Time to create video: "+str(time.time()-start))
 
 if __name__ == '__main__':
     input_link = "https://www.sciencedaily.com/releases/2024/04/240401142454.htm"
