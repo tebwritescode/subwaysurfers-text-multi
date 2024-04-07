@@ -1,23 +1,17 @@
 from tiktokvoice import tts
 from pydub import AudioSegment
 from goose3 import Goose
-import os, time
+import os, audioread
 
-link = input("Input link to article:: ")
+VOICE = "en_us_006"
 
-start_time = time.time()
+def generate_wav(link):
+    g = Goose()
+    article = g.extract(link)
+    text = article.cleaned_text
 
-g = Goose()
-article = g.extract(link)
-text = article.cleaned_text
+    #tts(input text, voice, output file, (optional) play sound)
+    tts(text, VOICE, "output.mp3")
 
-voice = "en_us_006"
-
-#tts(input text, voice, output file, (optional) play sound)
-tts(text, voice, "output.mp3")
-
-sound = AudioSegment.from_mp3("output.mp3")
-sound.export("output.wav", format="wav")
-
-print(f"Execution time: {time.time()-start_time} seconds")
-
+    sound = AudioSegment.from_mp3("output.mp3")
+    sound.export("output.wav", format="wav")

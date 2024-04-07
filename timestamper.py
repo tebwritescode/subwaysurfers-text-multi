@@ -6,7 +6,6 @@ path to vosk model downloaded from
 https://alphacephei.com/vosk/models
 Currently using the 1.8Gb version 
 """
-SetLogLevel(-1)
 
 def get_words_and_timestamps(model_path, audio):
     SetLogLevel(-1)
@@ -65,18 +64,3 @@ def get_words_and_timestamps(model_path, audio):
             end_times.append(obj["end"])
     
     return words, end_times
-
-if __name__ == "__main__":
-    INPUT_FILE = "output.wav"
-
-    start_time = time.time()
-
-    # Turn LOG messages on / off, 0 is on and -1 is off
-    SetLogLevel(-1)
-
-    model_path = "/Users/danielbonkowsky/Documents/vosk-model-en-us-0.22"
-    w, e = get_words_and_timestamps(model_path=model_path, audio=INPUT_FILE)
-    print(w)
-    print(e)
-
-    print(f"Execution time: {time.time()-start_time} seconds")
