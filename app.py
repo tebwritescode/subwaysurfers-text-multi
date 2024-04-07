@@ -1,33 +1,51 @@
-from flask import Flask, render_template, request, Response
-import os, re
+from flask import Flask, render_template, request, Response, stream_with_context, redirect, url_for
+import os
+from urllib.parse import quote
+from testing import script
 
 app = Flask(__name__)
 
 @app.route('/')
-def get_file():
-    range_header = request.headers.get('Range', None)
-    byte1, byte2 = 0, None
-    if range_header:
-        match = re.search(r'(\d+)-(\d*)', range_header)
-        groups = match.groups()
+def home():
+    return render_template('index.html')
 
-        if groups[0]:
-            byte1 = int(groups[0])
-        if groups[1]:
-            byte2 = int(groups[1])
-       
-    chunk, start, length, file_size = get_chunk(byte1, byte2)
-    resp = Response(chunk, 206, mimetype='video/mp4',
-                      content_type='video/mp4', direct_passthrough=True)
-    resp.headers.add('Content-Range', 'bytes {0}-{1}/{2}'.format(start, start + length - 1, file_size))
-    return resp
-
-
-@app.route('/output', methods=['POST'])
-def output():
+@app.route('/submit-form', methods=['POST'])
+def submit_form():
     text_input = request.form['text_input']
-    return render_template('output.html', text_input=text_input)
+    script(text_input)
+    # Now, handle the text input as needed
+    # For example, redirect to the video page
+    return redirect(url_for('output'))
 
+@app.route('/output', methods=['GET'])
+def output():    
+    file_path = 'final.mp4'
+    file_size = os.path.getsize(file_path)
+    range_header = request.headers.get('Range', None)
+
+    if not range_header:
+        # Directly return the file without chunking if no range header is present
+        with open(file_path, 'rb') as f:
+            return Response(f.read(), mimetype='video/mp4')
+
+    start, end = range_header.strip().lower().split('bytes=')[1].split('-')
+    start = int(start)
+    end = int(end) if end else file_size - 1
+    length_container = [end - start + 1] 
+
+    def generate_chunk():
+        with open(file_path, 'rb') as video_file:
+            video_file.seek(start)
+            chunk_size = 4096
+            while length_container[0] > 0:
+                chunk = video_file.read(min(chunk_size, length_container[0]))
+                if not chunk:
+                    break
+                yield chunk
+                length_container[0] -= len(chunk)
+
+    return Response(stream_with_context(generate_chunk()), status=206, mimetype='video/mp4',
+                    content_type='video/mp4', headers={'Content-Range': f'bytes {start}-{end}/{file_size}', 'Accept-Ranges': 'bytes'})
 @app.route('/invalid_link')
 def invalid_link():
     return render_template('invalid.html')
