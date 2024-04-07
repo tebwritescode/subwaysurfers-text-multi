@@ -4,7 +4,35 @@ h1{
 
 #indexbody {
     background-image: url('mainpage.png');
-    background-position: center;
-    margin: 0; /* Remove default margin */
-    padding: 0; /* Remove default padding */
+    background-size: cover;
+    margin: 0; 
+    padding: 0; 
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
 }
+
+#textform {
+    margin-top: 70vh;
+}
+#textform [type="text"]{
+    border-radius: 10px; 
+    border: none;
+    padding-left: 0px;
+    padding-right: 0px;
+    padding-top: 20px;
+    padding-bottom: 20px;
+    background-color: #fafafac1; 
+    font-size: 16px;
+    width: 300px; 
+    outline: none;
+    text-align: center;
+    color: black;
+}
+
+::placeholder {
+    color: navy;
+    opacity: 1; /* Firefox */
+  }
+  
