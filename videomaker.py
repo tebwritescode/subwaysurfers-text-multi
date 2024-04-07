@@ -50,6 +50,23 @@ def create_video(words, timestamps, video_length):
     framestamps = []
     for time in timestamps:
         framestamps.append(time * fps)
+    
+    word_num = 0
+    for i in range(video_length * fps):
+        if (i == framestamps[word_num]):
+            word_num += 1
+
+        ret, frame = video.read()
+        if (not ret):
+            break
+
+        word = words[word_num]
+        cv2.putText(frame, word, (300, 300), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+        output_video.write(frame)
+
+
+        
+
 
 
 
