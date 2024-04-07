@@ -1,5 +1,7 @@
-from flask import Flask, render_template, request, Response, stream_with_context
+from flask import Flask, render_template, request, Response, stream_with_context, redirect, url_for
 import os
+from urllib.parse import quote
+from testing import script
 
 app = Flask(__name__)
 
@@ -7,8 +9,19 @@ app = Flask(__name__)
 def home():
     return render_template('index.html')
 
-@app.route('/output', methods=['GET','POST'])
-def output():
+@app.route('/submit-form', methods=['POST'])
+def submit_form():
+    text_input = request.form['text_input']
+    encoded_text_input = quote(text_input)
+    # Now, handle the text input as needed
+    # For example, redirect to the video page
+    return redirect(url_for('output', _external=True) + f"?text_input={encoded_text_input}")
+
+@app.route('/output', methods=['GET'])
+def output():    
+    text_input = request.args.get('text_input', default=None)
+    print(f"Received text input: {text_input}")
+    script(text_input)
     file_path = 'output.mp4'
     file_size = os.path.getsize(file_path)
     range_header = request.headers.get('Range', None)
