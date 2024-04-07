@@ -7,10 +7,9 @@ two lists, one of words and other of ending timestamps
 '''
 
 #video_length should be the length of the template video file, should be in seconds
-def create_video(words, timestamps, video_length):
+def create_video(words, timestamps, video_length, source_video, output_video):
     # loading video file
-    input_video_path = 'static/surf.mp4'
-    video = cv2.VideoCapture(input_video_path)
+    video = cv2.VideoCapture(source_video)
 
     # Get video properties
     fps = int(video.get(cv2.CAP_PROP_FPS))
@@ -22,7 +21,7 @@ def create_video(words, timestamps, video_length):
 
     # Define the codec and create VideoWriter object
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    output_video = cv2.VideoWriter('output_video.mp4', fourcc, fps, (width, height))
+    output_video = cv2.VideoWriter(output_video, fourcc, fps, (width, height))
 
     #Define the text properties
     font = cv2.FONT_HERSHEY_PLAIN

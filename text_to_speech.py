@@ -3,7 +3,7 @@ from pydub import AudioSegment
 from goose3 import Goose
 import os, audioread
 
-def generate_wav(link, voice):
+def generate_wav(link, voice, output_file):
     g = Goose()
     article = g.extract(link)
     text = article.cleaned_text
@@ -12,4 +12,4 @@ def generate_wav(link, voice):
     tts(text, voice, "output.mp3")
 
     sound = AudioSegment.from_mp3("output.mp3")
-    sound.export("output.wav", format="wav")
+    sound.export(output_file, format="wav")
