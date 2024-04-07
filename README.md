@@ -1,4 +1,4 @@
-# Text to Tracks: a Subway Surfers Video Article Converter
+# Text to Tracks: A Subway Surfers Video Article Converter
 
 ## Inspiration
 Maintaining focus and attention while reading educational articles can be challenging. We recognized this issue and aimed to provide a solution that makes learning more engaging.
