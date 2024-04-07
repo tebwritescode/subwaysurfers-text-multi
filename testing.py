@@ -12,7 +12,7 @@ VARIABLES
 """
 
 # Path to Vosk model used for word/timestamp processing
-MODEL_PATH = "/Users/danielbonkowsky/Documents/vosk-model-en-us-0.22"
+MODEL_PATH = "static/vosk-model-en-us-0.22"
 
 # Subway surfers source video
 SOURCE_VIDEO = "static/surf.mp4"
