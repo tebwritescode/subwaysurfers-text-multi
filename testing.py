@@ -8,8 +8,9 @@ MODEL_PATH = "/Users/danielbonkowsky/Documents/vosk-model-en-us-0.22"
 WAV_FILE = "output.wav"
 INPUT_VIDEO = "output_video.mp4"
 OUTPUT_VIDEO = "output.mp4"
+VOICE = "en_us_c3po"
 
-generate_wav(INPUT_LINK)
+generate_wav(INPUT_LINK, VOICE)
 
 get_words_and_timestamps(MODEL_PATH, WAV_FILE)
 texts, timestamps = get_words_and_timestamps(MODEL_PATH, WAV_FILE)
