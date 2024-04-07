@@ -11,6 +11,10 @@ def output():
     text_input = request.form['text_input']
     return render_template('output.html', text_input=text_input)
 
+@app.route('/invalid_link')
+def invalid_link():
+    return render_template('invalid.html')
+
 # this code runs the app in "development" mode which makes it easier when developing. 
 # comment out for final product
 if __name__ == '__main__':
