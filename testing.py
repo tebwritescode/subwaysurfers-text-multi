@@ -30,7 +30,7 @@ CAPTION_VIDEO = "output_caption.mp4"
 OUTPUT_VIDEO = "final.mp4"
 
 # voice the article is narrated in
-VOICE = "en_us_c3po"
+VOICE = "en_us_006"
 
 """
 
