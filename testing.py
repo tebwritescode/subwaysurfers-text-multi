@@ -26,6 +26,9 @@ MP3_FILE = "output.mp3"
 # .mp4 file created with captions overlayed on subway surfers
 CAPTION_VIDEO = "output_caption.mp4"
 
+# .mp4 file with the wrong encoding
+PRE_OUTPUT_VIDEO = "output_wrong_encoding.mp4"
+
 # final output video (WAV_FILE + CAPTION_VIDEO)
 OUTPUT_VIDEO = "final.mp4"
 
@@ -59,7 +62,7 @@ def script(input_link):
     print("Captioned video generated.")
 
     # combines the sound and the caption video
-    os.system(f"bash concat.sh {CAPTION_VIDEO} {WAV_FILE} {OUTPUT_VIDEO}")
+    os.system(f"bash concat.sh {CAPTION_VIDEO} {WAV_FILE} {PRE_OUTPUT_VIDEO} {OUTPUT_VIDEO}")
     print("Audio and video combined.")
     print("Time to create video: "+str(time.time()-start))
 
