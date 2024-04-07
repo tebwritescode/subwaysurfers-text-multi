@@ -2,9 +2,7 @@ from videomaker import create_video
 from timestamper import get_words_and_timestamps
 from text_to_speech import generate_sound_files
 from compression import compress_video
-import ffmpeg, os, audioread, time
-
-start_time = time.time()
+import ffmpeg, os, audioread
 
 """
 
@@ -13,7 +11,7 @@ VARIABLES
 """
 
 # Link to article to be processed
-INPUT_LINK = "https://www.sciencedaily.com/releases/2024/04/240401142454.htm"
+INPUT_LINK = "https://www.science.org/content/article/modern-blackfoot-people-descend-ancient-ice-age-lineage?et_rid=960447322&et_cid=5164505"
 
 # Path to Vosk model used for word/timestamp processing
 MODEL_PATH = "/Users/danielbonkowsky/Documents/vosk-model-en-us-0.22"
@@ -64,5 +62,3 @@ compress_video(CAPTION_BIG_VIDEO, CAPTION_SMALL_VIDEO)
 
 # combines the sound and the caption video
 os.system(f"bash concat.sh {CAPTION_SMALL_VIDEO} {WAV_FILE} {OUTPUT_VIDEO}")
-
-print(f"Total time: {time.time() - start_time} seconds")
