@@ -13,8 +13,8 @@ def create_video(words, timestamps, video_length):
     # output_video_path = 'static\\outputvid.mp4'
     starttimestamp = generate_starttimestamp(video_length)
     video = cv2.VideoCapture(input_video_path)
-    # video.set(cv2.CAP_PROP_POS_MSEC, starttimestamp)
-    video.set(cv2.CAP_PROP_POS_MSEC, 500)
+    video.set(cv2.CAP_PROP_POS_MSEC, starttimestamp)
+    # video.set(cv2.CAP_PROP_POS_MSEC, 500)
 
     # Get video properties
     fps = int(video.get(cv2.CAP_PROP_FPS))
@@ -52,15 +52,5 @@ def create_video(words, timestamps, video_length):
 
 def generate_starttimestamp(video_length):
     return random.randint(500, 5000 - video_length) * 10
-
-        # current_time = time.time()
-        # # Check if it's time to change the word based on the timestamp
-        # if time.time() - start_time >= timestamps[current_timestamp_idx]:
-        #     # Display the current word on the frame
-        #     cv2.putText(frame, words[current_timestamp_idx], text_position, font, font_scale, font_color, thickness)
-        #     current_timestamp_idx += 1  # Move to the next timestamp
-
-        # # Write the frame to the output video
-        # output_video.write(frame)
 
     # Release the video capture and writer objects
