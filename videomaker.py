@@ -9,14 +9,16 @@ two lists, one of words and other of ending timestamps
 #video_length should be the length of the template video file, should be in seconds
 def create_video(words, timestamps, video_length):
     # loading video file
-    input_video_path = 'surf.mp4'
+    input_video_path = 'static/surf.mp4'
     video = cv2.VideoCapture(input_video_path)
-    video.set(cv2.CAP_PROP_POS_MSEC, 1000000)
 
     # Get video properties
     fps = int(video.get(cv2.CAP_PROP_FPS))
     width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+    # start at a random location 0 to 10 seconds in
+    video.set(cv2.CAP_PROP_POS_MSEC, random.randint(0, 10) * fps)
 
     # Define the codec and create VideoWriter object
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
