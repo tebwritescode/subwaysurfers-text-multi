@@ -32,7 +32,7 @@ h1{
 }
 
 ::placeholder {
-    color: navy;
+    color: rgb(10, 10, 20);
     opacity: 1; /* Firefox */
   }
   
