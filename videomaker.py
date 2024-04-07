@@ -49,7 +49,7 @@ def create_video(words, timestamps, video_length):
 
     framestamps = []
     for time in timestamps:
-        framestamps.append(time * fps)
+        framestamps.append(int(time * fps))
     
     word_num = 0
     for i in range(video_length * fps):
