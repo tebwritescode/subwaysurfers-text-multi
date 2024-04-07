@@ -9,7 +9,7 @@ two lists, one of words and other of ending timestamps
 #video_length should be the length of the template video file, should be in seconds
 def create_video(words, timestamps, video_length):
     # loading video file
-    input_video_path = 'surf.mp4'
+    input_video_path = 'static/subway_surf.mp4'
     # output_video_path = 'static\\outputvid.mp4'
     starttimestamp = generate_starttimestamp(video_length)
     video = cv2.VideoCapture(input_video_path)
