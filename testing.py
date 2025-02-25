@@ -4,6 +4,8 @@ from text_to_speech import generate_wav
 from compression import compress_video
 import ffmpeg, os, audioread
 import time
+import os
+import random
 
 """
 
@@ -40,8 +42,56 @@ VOICE = "en_us_006"
 SCRIPT
 
 """
+
+
+def get_random_video(directory='./static'):
+    """
+    Get a random video file path from the specified directory
+    
+    Args:
+        directory (str): Path to the directory containing video files
+    
+    Returns:
+        str: Full path to a randomly selected video file, or None if no videos found
+    """
+    try:
+        # Ensure the directory exists
+        if not os.path.isdir(directory):
+            print(f"Error: Directory {directory} does not exist")
+            return None
+        
+        # Find all .mp4 files in the directory
+        video_files = [
+            os.path.join(directory, f) 
+            for f in os.listdir(directory) 
+            if f.lower().endswith('.mp4')
+        ]
+        
+        # Check if any video files were found
+        if not video_files:
+            print(f"No .mp4 files found in {directory}")
+            return None
+        
+        # Select and print a random video file
+        random_video = random.choice(video_files)
+        print(f"Video file selected: {random_video}")
+        
+        return random_video
+    
+    except Exception as e:
+        print(f"Error getting random video: {e}")
+        return None
+
 def script(input_link):
     start = time.time()
+
+    SOURCE_VIDEO = get_random_video()
+    if not SOURCE_VIDEO:
+        print("Failed to get a source video. Exiting.")
+        return
+    else:
+        print(f"Source Video File: {SOURCE_VIDEO}")
+
     # removes all old output files and final.mp4
     os.system(f"bash clean.sh {OUTPUT_VIDEO}")
     print("All generated files removed")
