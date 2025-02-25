@@ -1,58 +1,64 @@
-# All below information is from the original which can be found at danielbonkowsky/subwaysurfers-text please give the original creator some love if you find this usefull. Thank you danielbonkowsky/subwaysurfers-text
+Certainly! Here is a code block formatted with Markdown:
+
+```markdown
+The information that follows is inspired by the original project found at [danielbonkowsky/subwaysurfers-text](https://github.com/danielbonkowsky/subwaysurfers-text). If you find this guide helpful, please extend your appreciation to the original creator, Daniel Bonkowsky.
 
 # Text to Tracks: A Subway Surfers Video Article Converter
 
 ## Inspiration
-Maintaining focus and attention while reading educational articles can be challenging. We recognized this issue and aimed to provide a solution that makes learning more engaging.
+Remaining focused and attentive when reading educational materials can often be difficult. Recognizing this challenge, we set out to create a solution that makes learning more captivating and enjoyable.
 
-## What it does
-Our web application takes a link to an article, scrapes the text, and puts it in the TikTok Subway Surfers-style video. This format is highly engaging which enables users to pay attention to the content and absorb information effectively.
+## What It Does
+Our web application transforms article links by extracting the text and presenting it in a Subway Surfers-style video format akin to TikTok. This engaging format allows users to absorb information more effectively by capturing their attention.
 
-## How we built it
-We used Python, HTML/CSS, Flask, OpenCV, goose3, Vosk API, and various other python libraries.
+## How We Built It
+The application was constructed using a combination of Python, HTML/CSS, Flask, OpenCV, goose3, Vosk API, among other Python libraries.
 
-## Supported platforms
-
-We tested our code on MacOS. 
-
-The local server should work on Safari, Chrome, and Firefox browsers. 
-
+## Supported Platforms
+The project was tested on macOS and the local server is compatible with Safari, Chrome, and Firefox browsers.
 
 ## Installation
 
-1. Install [Python](https://www.python.org/) (>= 3.11)
+1. Ensure [Python](https://www.python.org/) (version 3.11 or higher) is installed on your system.
 
-2. Clone our repository. 
+2. Clone the repository using the following command:
    ```
    git clone https://github.com/danielbonkowsky/subwaysurfers-text.git
    ```
 
-3. Install `pip3` dependencies
+3. Set up a Python environment using version 3.12.
+
+4. Install the required `pip3` dependencies:
    ```
    pip3 install -r requirements-pip.txt
    ```
 
-4. Install `brew` dependencies:
+5. Install necessary dependencies via Homebrew:
    ```
    xargs brew install < requirements-brew.txt
    ```
 
-5. Download the Subway Surfers [background gameplay](https://drive.google.com/file/d/1ZyFZKIB1HiZM_XDQPRRiiAIvU4sgl10k/view?usp=drive_link), title it `surf.mp4` and place it in the `static` folder of your local repository. 
+6. Download the Subway Surfers [background gameplay](https://drive.google.com/file/d/1ZyFZKIB1HiZM_XDQPRRiiAIvU4sgl10k/view?usp=drive_link), rename it to `surf.mp4`, and place it into the `static` folder of your local repository. Additional videos can be added to the `./static` folder, and one will be randomly selected for each run.
 
-6. Download the [Vosk English Model](https://alphacephei.com/vosk/models/vosk-model-en-us-0.22.zip), unzip the folder and place it in the `static` folder of your local repository.
-
+7. Obtain the [Vosk English Model](https://alphacephei.com/vosk/models/vosk-model-en-us-0.22.zip), unzip it, and place the folder into the `static` directory of your local repository.
 
 ## Running the Server
 
-1. Navigate into the repository in your terminal.
+1. Open your terminal and navigate to the repository.
 
-2. Create the development server. 
+2. Start the development server with:
    ```
    flask run
    ```
 
-3. Open the local server in your browser. 
+or
 
-4. Paste a link to the article you want converted into the textbox, and press `<enter>`! The video takes a while to generate, but the terminal should show that the program is running.
-   * If it asks you to override any files, override them. 
+2. Start the development server opening all interfaces and selecting a custom port(HERE BE DRAGONS, know the danger) replace 3000 with your port of choice
+   ```
+   flask run -h 0.0.0.0 -p 3000
+   ```
 
+3. In your browser, access the local server.
+
+4. Paste the article link you wish to convert into the text box and click `Submit`. While video generation may take some time, the terminal will indicate the program is functioning. If prompted to override any files, proceed to override them.
+```
