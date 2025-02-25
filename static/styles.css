@@ -1,54 +1,177 @@
-h1{
-    color: red;
+:root {
+    /* Modern Color Palette */
+    --bg-primary: #0f0f0f;
+    --bg-secondary: #1a1a1a;
+    --text-primary: #ffffff;
+    --text-secondary: #b0b0b0;
+    --accent-color: #3498db;
+    --hover-color: #2980b9;
+
+    /* Typography */
+    --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    height: 100%;
+    font-family: var(--font-primary);
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    line-height: 1.6;
 }
 
 #indexbody {
-    background-image: url('mainpage.png');
+    display: grid;
+    grid-template-rows: 1fr auto;
+    height: 100vh;
+    background: 
+        linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), 
+        url('mainpage.png') no-repeat center center;
     background-size: cover;
-    margin: 0; 
-    padding: 0; 
-    display: flex;
-    justify-content: center;
-    align-items: center;
-
 }
 
 #textform {
-    margin-top: 70vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 1rem;
+    gap: 1rem;
 }
-#textform [type="text"]{
-    border-radius: 10px; 
-    border: none;
-    padding-left: 0px;
-    padding-right: 0px;
-    padding-top: 20px;
-    padding-bottom: 20px;
-    background-color: rgb(0,0 , 0);
-    opacity: 0.75;
-    /*background-color: #fafafac1; */
-    font-size: 16px;
-    width: 300px; 
+
+#text_input {
+    width: 100%;
+    min-height: 50vh;
+    background-color: rgba(26, 26, 26, 0.8);
+    color: var(--text-primary);
+    border: 2px solid transparent;
+    border-radius: 12px;
+    padding: 1.5rem;
+    font-size: 1rem;
+    resize: none;
+    transition: 
+        border-color 0.3s ease,
+        box-shadow 0.3s ease;
+    overflow-y: auto;
+    word-wrap: break-word;
+    line-height: 1.5;
+}
+
+#text_input:focus {
     outline: none;
-    text-align: center;
-    color:white;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 15px rgba(52, 152, 219, 0.3);
+}
+
+#submit-btn {
+    width: 100%;
+    padding: 1rem;
+    background-color: var(--accent-color);
+    color: var(--text-primary);
+    border: none;
+    border-radius: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: 
+        background-color 0.3s ease,
+        transform 0.2s ease;
+}
+
+#submit-btn:hover {
+    background-color: var(--hover-color);
+    transform: translateY(-3px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+#submit-btn:active {
+    transform: translateY(1px);
 }
 
 ::placeholder {
-    color: white;
-    opacity: 1;
-    font-family:Verdana, Geneva, Tahoma, sans-serif;
-    font-weight: bold;
-  }
-  
-#video-container {
+    color: var(--text-secondary);
+    opacity: 0.7;
+}
+
+/* Responsive Typography */
+@media (max-width: 768px) {
+    #textform {
+        width: 95%;
+        padding: 0.5rem;
+    }
+
+    #text_input, #submit-btn {
+        font-size: 0.9rem;
+        padding: 1rem;
+    }
+}
+
+/* Scrollbar Styling */
+#text_input::-webkit-scrollbar {
+    width: 8px;
+}
+
+#text_input::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+}
+
+#text_input::-webkit-scrollbar-thumb {
+    background: var(--accent-color);
+    border-radius: 10px;
+}
+
+.error-page {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh; /* Adjust the height as needed */
+    height: 100vh;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
 }
 
-/* Set the video size */
-video {
-    max-width: 100%;
-    max-height: 100%;
+.error-container {
+    text-align: center;
+    background-color: var(--bg-secondary);
+    padding: 2rem;
+    border-radius: 12px;
+    max-width: 500px;
+    width: 90%;
+}
+
+.error-container h1 {
+    color: #e74c3c; /* Bright red for error */
+    margin-bottom: 1rem;
+    font-size: 2.5rem;
+}
+
+.error-container p {
+    color: var(--text-secondary);
+    margin-bottom: 1.5rem;
+}
+
+.back-btn {
+    display: inline-block;
+    background-color: var(--accent-color);
+    color: var(--text-primary);
+    text-decoration: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    transition: 
+        background-color 0.3s ease,
+        transform 0.2s ease;
+}
+
+.back-btn:hover {
+    background-color: var(--hover-color);
+    transform: translateY(-3px);
 }
