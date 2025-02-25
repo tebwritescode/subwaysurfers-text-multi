@@ -1,6 +1,3 @@
-Certainly! Here is a code block formatted with Markdown:
-
-```markdown
 The information that follows is inspired by the original project found at [danielbonkowsky/subwaysurfers-text](https://github.com/danielbonkowsky/subwaysurfers-text). If you find this guide helpful, please extend your appreciation to the original creator, Daniel Bonkowsky.
 
 # Text to Tracks: A Subway Surfers Video Article Converter
@@ -61,4 +58,3 @@ or
 3. In your browser, access the local server.
 
 4. Paste the article link you wish to convert into the text box and click `Submit`. While video generation may take some time, the terminal will indicate the program is functioning. If prompted to override any files, proceed to override them.
-```
