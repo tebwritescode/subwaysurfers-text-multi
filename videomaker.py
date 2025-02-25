@@ -16,8 +16,8 @@ def create_video(words, timestamps, video_length, source_video, output_video):
     width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-    # start at a random location 0 to 10 seconds in
-    video.set(cv2.CAP_PROP_POS_MSEC, random.randint(0, 10) * fps)
+    # start at a random location 0 to 30 minutes remaining
+    video.set(cv2.CAP_PROP_POS_MSEC, random.randint(10 * fps, 30 * 60 * fps))
 
     # Define the codec and create VideoWriter object
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
