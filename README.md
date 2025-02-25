@@ -1,3 +1,5 @@
+# All below information is from the original which can be found at danielbonkowsky/subwaysurfers-text please give the original creator some love if you find this usefull. Thank you danielbonkowsky/subwaysurfers-text
+
 # Text to Tracks: A Subway Surfers Video Article Converter
 
 ## Inspiration
