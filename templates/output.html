@@ -1,20 +1,24 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="/static/styles.css" rel="stylesheet">
-    <title>Output</title></head>
-    <script src="output.js"></script>
+    <title>Output</title>
+</head>
 <body>
-    <div id="video-container">
-        <video controls>
-            <source src="/output" type="video/mp4">
-            Your browser does not support the video tag.
-        </video>
+    <div class="output-page">
+        <div class="back-button-container">
+            <a href="/" class="back-btn">← Back to Home</a>
+        </div>
+        
+        <div id="video-container">
+            <video controls>
+                <source src="/output" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+        </div>
     </div>
-
-    
 </body>
 </html>
