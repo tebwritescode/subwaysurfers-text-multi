@@ -58,3 +58,11 @@ or
 3. In your browser, access the local server.
 
 4. Paste the article link you wish to convert into the text box and click `Submit`. While video generation may take some time, the terminal will indicate the program is functioning. If prompted to override any files, proceed to override them.
+
+
+## Planned Future Features
+ - Environment variables to adjust speed
+ - Environment variables to select voice
+ - NVIDIA GPU Support(Works in the manual install version)
+ - Figure out why sometimes the subtitles get stuck
+ - Remove voice model from docker image and mount as volume instead
