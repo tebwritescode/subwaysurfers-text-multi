@@ -39,7 +39,10 @@ The project was tested on macOS and the local server is compatible with Safari, 
 
 7. Obtain the [Vosk English Model](https://alphacephei.com/vosk/models/vosk-model-en-us-0.22.zip), unzip it, and place the folder into the `static` directory of your local repository.
 
-## Running the Server
+## Running with Docker
+https://hub.docker.com/r/tebwritescode/subwaysurfers-text20
+
+## Running on baremetal
 
 1. Open your terminal and navigate to the repository.
 
