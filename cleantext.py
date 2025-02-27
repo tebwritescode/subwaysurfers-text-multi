@@ -1,13 +1,10 @@
 import re
-
 def cleantext(text):
     """
     Clean text by replacing elements not suitable for TTS with descriptions.
     Ensures that duplicate placeholders are merged into a single instance.
-    
     Args:
         text (str): The input text to clean
-        
     Returns:
         str: The cleaned text with problematic elements replaced
     """
@@ -16,80 +13,98 @@ def cleantext(text):
         parts = ip.split('.')
         spelled_parts = []
         for part in parts:
-            spelled_part = ' '.join(["Zero" if digit == "0" else 
-                                     "One" if digit == "1" else 
-                                     "Two" if digit == "2" else 
-                                     "Three" if digit == "3" else 
-                                     "Four" if digit == "4" else 
-                                     "Five" if digit == "5" else 
-                                     "Six" if digit == "6" else 
-                                     "Seven" if digit == "7" else 
-                                     "Eight" if digit == "8" else 
+            spelled_part = ' '.join(["Zero" if digit == "0" else
+                                     "One" if digit == "1" else
+                                     "Two" if digit == "2" else
+                                     "Three" if digit == "3" else
+                                     "Four" if digit == "4" else
+                                     "Five" if digit == "5" else
+                                     "Six" if digit == "6" else
+                                     "Seven" if digit == "7" else
+                                     "Eight" if digit == "8" else
                                      "Nine" for digit in part])
             spelled_parts.append(spelled_part)
         return f"[{' Dot '.join(spelled_parts)}]"
-
-    # First, handle markdown code blocks
-    text = re.sub(r'```[\s\S]*?```', "[Code block is shown]", text)
-
-    # Handle URLs
-    text = re.sub(r'https?://[^\s<>"]+', "[A URL is shown]", text)
-    text = re.sub(r'www\.[^\s<>"]+', "[A URL is shown]", text)
-
-    # Handle Windows and Unix file paths
-    text = re.sub(r'[a-zA-Z]:\\(?:[^\\/:*?"<>|\r\n]+\\)*[^\\/:*?"<>|\r\n]*', "[A file path is shown]", text)
-    text = re.sub(r'/(?:[a-zA-Z0-9._-]+/)*[a-zA-Z0-9._-]+', "[A file path is shown]", text)
-
-    # Handle email addresses
-    text = re.sub(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', "[An email address is shown]", text)
-
-    # Handle HTML tags
-    text = re.sub(r'</?[a-zA-Z]+[^>]*>', "[HTML tag is shown]", text)
-
-    # Handle JSON/XML structures
+    
+    # Limit the size of text to process to prevent DoS attacks
+    MAX_TEXT_LENGTH = 100000  # Set a reasonable limit
+    if len(text) > MAX_TEXT_LENGTH:
+        text = text[:MAX_TEXT_LENGTH] + "[Text truncated due to length]"
+        
+    # First, handle markdown code blocks - Fixed with non-backtracking approach
+    # Use a safer approach for code blocks
+    code_block_pattern = re.compile(r'```(?:[^`]|`(?!``)|``(?!`))*```', re.DOTALL)
+    text = code_block_pattern.sub("[Code block is shown]", text)
+    
+    # Handle URLs with safer patterns
+    text = re.sub(r'https?://[^\s<>"]{1,2048}', "[A URL is shown]", text)
+    text = re.sub(r'www\.[^\s<>"]{1,2048}', "[A URL is shown]", text)
+    
+    # Handle Windows and Unix file paths with length limits
+    text = re.sub(r'[a-zA-Z]:\\(?:[^\\/:*?"<>|\r\n]+\\){0,10}[^\\/:*?"<>|\r\n]{0,255}', "[A file path is shown]", text)
+    text = re.sub(r'/(?:[a-zA-Z0-9._-]+/){0,10}[a-zA-Z0-9._-]{0,255}', "[A file path is shown]", text)
+    
+    # Handle email addresses - safer pattern with length limits
+    text = re.sub(r'\b[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]{1,255}\.[A-Z|a-z]{2,63}\b', "[An email address is shown]", text)
+    
+    # Handle HTML tags - safer pattern with length limits
+    text = re.sub(r'</?[a-zA-Z][a-zA-Z0-9]{0,20}[^>]{0,256}>', "[HTML tag is shown]", text)
+    
+    # Handle JSON/XML structures - safer approach with limited nesting
     def replace_data_structure(match):
         content = match.group(0)
+        if len(content) > 1024:  # Limit size to process
+            return "[Large data structure is shown]"
         return "[Data structure is shown]" if ('":' in content or '">' in content) else content
-    text = re.sub(r'[\{\[][\s\S]*?[\}\]]', replace_data_structure, text)
-
+    
+    # Use a safer approach with bounded repetition
+    text = re.sub(r'[\{\[](?:[^\{\}\[\]]|\{[^\{\}\[\]]*\}|\[[^\{\}\[\]]*\]){0,100}[\}\]]', replace_data_structure, text)
+    
     # Handle code syntax elements
     code_patterns = [
-        r'def\s+\w+', r'class\s+\w+', r'import\s+\w+', r'function\s+\w+',
-        r'var\s+\w+', r'const\s+\w+', r'let\s+\w+', r'if\s*\(', r'while\s*\(',
-        r'for\s*\(', r'\{\s*\n', r'\}\s*\n', r'return\s+\w+', r'\(\)\s*\{',
-        r'\([^)]*\)\s*\{', r'\}\s*else\s*\{', r';\s*\}', r'}\s*$',
+        r'def\s+\w{1,50}', r'class\s+\w{1,50}', r'import\s+\w{1,50}', r'function\s+\w{1,50}',
+        r'var\s+\w{1,50}', r'const\s+\w{1,50}', r'let\s+\w{1,50}', r'if\s*\(', r'while\s*\(',
+        r'for\s*\(', r'\{\s*\n', r'\}\s*\n', r'return\s+\w{1,50}', r'\(\)\s*\{',
+        r'\([^)]{0,200}\)\s*\{', r'\}\s*else\s*\{', r';\s*\}', r'}\s*$',
     ]
     for pattern in code_patterns:
         text = re.sub(pattern, "[Code syntax is shown]", text)
-
-    # Handle special character sequences
-    text = re.sub(r'[^\w\s,.!?;:\'"-]{4,}', "[Special character sequence is shown]", text)
-
-    # Handle hexadecimal values
-    text = re.sub(r'\b0x[0-9a-fA-F]{2,}\b|#[0-9a-fA-F]{3,6}\b', "[A hexadecimal value is shown]", text)
-
-    # Handle IP addresses
-    text = re.sub(r'\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b', lambda match: ip_to_words(match.group(0)), text)
-
-    # Handle long numbers
-    text = re.sub(r'\b\d{6,}\b', lambda match: f"[A {len(match.group(0))}-digit number]", text)
-
-    # Remove duplicate placeholders (e.g., [Code syntax is shown][Code syntax is shown])
-    text = re.sub(r'(\[.+?\])\1+', r'\1', text)
-
+    
+    # Handle special character sequences - limit the repetition
+    text = re.sub(r'[^\w\s,.!?;:\'"-]{4,100}', "[Special character sequence is shown]", text)
+    
+    # Handle hexadecimal values - limit the length
+    text = re.sub(r'\b0x[0-9a-fA-F]{2,16}\b|#[0-9a-fA-F]{3,8}\b', "[A hexadecimal value is shown]", text)
+    
+    # Handle IP addresses - safer pattern with specific digit constraints
+    ip_pattern = re.compile(r'\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b')
+    text = ip_pattern.sub(lambda match: ip_to_words(match.group(0)), text)
+    
+    # Handle long numbers - limit the length
+    text = re.sub(r'\b\d{6,20}\b', lambda match: f"[A {len(match.group(0))}-digit number]", text)
+    
+    # Remove duplicate placeholders - safer approach with bounded repetition
+    text = re.sub(r'(\[.{1,50}?\])(\1){1,10}', r'\1', text)
+    
     return text
 
 # The following is only used when running the script directly
 if __name__ == '__main__':
     import sys
-    
     if len(sys.argv) != 3:
         print("Usage: python cleantext.py input_file output_file")
         sys.exit(1)
-    
     input_file = sys.argv[1]
     output_file = sys.argv[2]
     
+    # Add file size check to prevent processing extremely large files
+    import os
+    MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB limit
+    
+    if os.path.getsize(input_file) > MAX_FILE_SIZE:
+        print(f"Error: Input file exceeds maximum size of {MAX_FILE_SIZE/1024/1024}MB")
+        sys.exit(1)
+        
     with open(input_file, 'r', encoding='utf-8') as f:
         content = f.read()
     
