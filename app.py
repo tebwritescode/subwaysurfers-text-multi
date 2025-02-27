@@ -94,4 +94,4 @@ def get_chunk(byte1=None, byte2=None):
 
 # Run the application in development mode with threading and debug enabled
 if __name__ == '__main__':
-    app.run(threaded=True, debug=True)
+    app.run(threaded=True, debug=False)
