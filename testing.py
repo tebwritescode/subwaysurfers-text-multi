@@ -28,7 +28,7 @@ PRE_OUTPUT_VIDEO = "output_wrong_encoding.mp4"
 # Final output video (audio + captioned video)
 OUTPUT_VIDEO = "final.mp4"
 # Voice used for text-to-speech narration
-VOICE = "en_us_006"
+VOICE = "en_us_rocket"
 
 """
 FUNCTIONS
@@ -98,7 +98,7 @@ def get_random_video(directory='./static'):
         print(f"Error getting random video: {e}")
         return None
 
-def script(input_link, customspeed):
+def script(input_link, customspeed, customvoice):
     """
     Main script function that processes text input and generates a video with captions.
     
@@ -122,7 +122,7 @@ def script(input_link, customspeed):
     print("All generated files removed")
     
     # Generate TTS audio from the input text
-    generate_wav(input_link, VOICE, WAV_FILE)
+    generate_wav(input_link, customvoice, WAV_FILE)
     print("Audio file generated.")
     
     # Adjust the audio speed according to user preference
