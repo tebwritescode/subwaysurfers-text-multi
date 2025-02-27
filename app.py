@@ -16,7 +16,8 @@ def submit_form():
     """Handle form submission, process the input text, and generate video."""
     text_input = request.form['text_input']
     customspeed = float(request.form.get('speed', 1.0))  # Default to 1.0 if not provided
-    script(text_input, customspeed)  # Pass speed to the script function
+    customvoice = str(request.form.get('voice', "en_us_006"))  # Default to en_us_006 if not provided
+    script(text_input, customspeed, customvoice)  # Pass speed to the script function
     
     # Redirect to the video output page after processing
     return redirect(url_for('output'))
@@ -94,4 +95,4 @@ def get_chunk(byte1=None, byte2=None):
 
 # Run the application in development mode with threading and debug enabled
 if __name__ == '__main__':
-    app.run(threaded=True, debug=False)
+    app.run(threaded=True, debug=True)
