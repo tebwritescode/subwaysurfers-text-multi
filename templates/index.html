@@ -1,17 +1,44 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- Character set and viewport configuration -->
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Stylesheet and font imports -->
     <link href="/static/styles.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    
+    <!-- Page title -->
     <title>Text to Tracks</title>
 </head>
 <body id="indexbody">
+    <!-- Main form for text input and speed control -->
     <form id="textform" action="/submit-form" method="post">
+        <!-- Text input area for article link or text content -->
         <textarea id="text_input" name="text_input" placeholder="Enter Article Link or Text"></textarea>
+        
+        <!-- Speed control section with slider -->
+        <div class="speed-control">
+            <label for="speed_slider">Playback Speed: <span id="speed_value">1.0</span>x</label>
+            <input type="range" id="speed_slider" name="speed" min="0.25" max="3" step="0.05" value="1.0">
+        </div>
+        
+        <!-- Submit button -->
         <button type="submit" id="submit-btn">Submit</button>
     </form>
+    
+    <!-- JavaScript for updating the speed value display when slider changes -->
+    <script>
+        // Get references to the slider and display elements
+        const speedSlider = document.getElementById('speed_slider');
+        const speedValue = document.getElementById('speed_value');
+        
+        // Update the displayed speed value when the slider is moved
+        speedSlider.addEventListener('input', function() {
+            speedValue.textContent = this.value;
+        });
+    </script>
 </body>
 </html>
