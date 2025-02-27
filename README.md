@@ -14,6 +14,10 @@ The application was constructed using a combination of Python, HTML/CSS, Flask, 
 ## Supported Platforms
 The project was tested on macOS and the local server is compatible with Safari, Chrome, and Firefox browsers.
 
+## Demo
+![Screenshot of Subway Surfers - Text](./demo/screenshot.png)
+[Watch the demo video](./demo/demo_output.mp4)
+
 ## Installation
 
 1. Ensure [Python](https://www.python.org/) (version 3.11 or higher) is installed on your system.
