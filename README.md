@@ -68,4 +68,3 @@ or
  - Environment variables to select voice
  - NVIDIA GPU Support(Works in the manual install version)
  - Figure out why sometimes the subtitles get stuck
- - Remove voice model from docker image and mount as volume instead
