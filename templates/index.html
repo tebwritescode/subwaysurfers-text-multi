@@ -1,25 +1,54 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- Character set and viewport configuration -->
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
-    <!-- Stylesheet and font imports -->
     <link href="/static/styles.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
     
-    <!-- Page title -->
     <title>Text to Tracks</title>
+    
+    <style>
+        .flash-messages {
+            width: 80%;
+            max-width: 600px;
+            margin: 0 auto 20px auto;
+            text-align: center;
+        }
+        .flash-message {
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            font-weight: 600;
+        }
+        .flash-message.error {
+            background-color: #ffebee;
+            color: #c62828;
+            border: 1px solid #ef9a9a;
+        }
+        .flash-message.success {
+            background-color: #e1fbe1;
+            color: #2e7d32;
+            border: 1px solid #81c784;
+        }
+    </style>
 </head>
 <body id="indexbody">
-    <!-- Main form for text input and speed control -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-messages">
+                {% for category, message in messages %}
+                    <div class="flash-message {{ category }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+    
     <form id="textform" action="/submit-form" method="post">
-        <!-- Text input area for article link or text content -->
         <textarea id="text_input" name="text_input" placeholder="Enter Article Link or Text"></textarea>
         
-        <!-- Voice selection dropdown -->
         <div class="voice-selection">
             <label for="voice">Select Voice:</label>
             <select id="voice" name="voice">
@@ -40,26 +69,41 @@
             </select>
         </div>
         
-        <!-- Speed control section with slider -->
         <div class="speed-control">
             <label for="speed_slider">Playback Speed: <span id="speed_value">1.0</span>x</label>
             <input type="range" id="speed_slider" name="speed" min="0.25" max="3" step="0.05" value="1.0">
         </div>
+
+        <div id="loading-message" class="flash-message success" style="display: none;">
+            Creating video... Please wait.
+        </div>
         
-        <!-- Submit button -->
         <button type="submit" id="submit-btn">Submit</button>
     </form>
     
-    <!-- JavaScript for updating the speed value display when slider changes -->
     <script>
-        // Get references to the slider and display elements
         const speedSlider = document.getElementById('speed_slider');
         const speedValue = document.getElementById('speed_value');
-        
-        // Update the displayed speed value when the slider is moved
+        const submitButton = document.getElementById('submit-btn');
+        const loadingMessage = document.getElementById('loading-message');
+
         speedSlider.addEventListener('input', function() {
             speedValue.textContent = this.value;
         });
+
+        document.getElementById('textform').addEventListener('submit', function() {
+            loadingMessage.style.display = "block";
+            submitButton.disabled = true;
+        });
+
+        // ✅ Unlock submit button if flash message contains error
+        window.onload = function() {
+            const errorMessages = document.querySelectorAll('.flash-message.error');
+            if (errorMessages.length > 0) {
+                submitButton.disabled = false;
+                loadingMessage.style.display = "none"; // Hide loading message if error occurs
+            }
+        };
     </script>
 </body>
 </html>
