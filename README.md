@@ -24,7 +24,7 @@ The project was tested on macOS and the local server is compatible with Safari, 
 
 2. Clone the repository using the following command:
    ```
-   git clone https://github.com/danielbonkowsky/subwaysurfers-text.git
+   git clone [https://github.com/danielbonkowsky/subwaysurfers-text.git](https://github.com/tebwritescode/subwaysurfers-text-multi.git)
    ```
 
 3. Set up a Python environment using version 3.12.
