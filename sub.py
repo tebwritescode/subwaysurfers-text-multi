@@ -1,7 +1,6 @@
 from videomaker import create_video
 from timestamper import get_words_and_timestamps
 from text_to_speech import generate_wav
-from compression import compress_video
 import subprocess
 import ffmpeg
 import os
