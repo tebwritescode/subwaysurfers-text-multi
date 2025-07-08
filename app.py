@@ -3,7 +3,7 @@ import os
 from urllib.parse import quote
 import traceback
 import sys
-from testing import script  # Ensure the external module is still used
+from sub import script  # Ensure the external module is still used
 
 # Initialize Flask application
 app = Flask(__name__)
