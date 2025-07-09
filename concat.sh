@@ -1,5 +1,5 @@
-ffmpeg -i $1 -i $2 -c copy -map 0:v:0 -map 1:a:0 $3 -shortest -preset fast
-ffmpeg -i $3 -vcodec h264 -acodec aac $4
+ffmpeg -i $1 -i $2 -c copy -map 0:v:0 -map 1:a:0 $3 -shortest -preset medium
+ffmpeg -i $3 -vcodec h264 -acodec aac $4 -preset medium
 
 # Replace above commands with below commands to use NVIDIA GPU
 # ffmpeg -i "$1" -i "$2" -c:v h264_nvenc -preset slow -b:v 5M -c:a copy -map 0:v:0 -map 1:a:0 -shortest "$3"
