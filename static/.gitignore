@@ -1,0 +1,13 @@
+# # Ignore specific files
+# config.json
+# secrets.txt
+
+# # Ignore directories
+# node_modules/
+# build/
+vosk-model-en-us-0.22/
+
+# # Ignore file types
+# *.log
+# *.tmp
+*.mp4
