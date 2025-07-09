@@ -121,7 +121,7 @@ def validate_text_input(text):
         raise ValueError(f"Input contains only {word_count} words. A minimum of 10 is required.")
     return f"Valid input with {word_count} words."
 
-def script(input_text, customspeed, customvoice):
+def script(input_text, customspeed, customvoice, final_path="final.mp4"):
     """
     Processes text input and generates a video with captions.
 
@@ -129,6 +129,7 @@ def script(input_text, customspeed, customvoice):
         input_text (str): Text to convert to speech.
         customspeed (float): Speech playback speed adjustment.
         customvoice (str): Voice selection for text-to-speech.
+        final_path (str): Path to save the final video.
 
     Returns:
         dict: Success or error message.
@@ -156,8 +157,12 @@ def script(input_text, customspeed, customvoice):
 
         logger.info(f"Source Video Selected: {source_video}")
 
+        logger.info("Cleaning up previous output files...")
         os.system(f"bash clean.sh {OUTPUT_VIDEO}")
-        
+
+        # Remove cleaning of previous final.mp4
+        # os.system(f"bash clean.sh {OUTPUT_VIDEO}")
+
         # Generate TTS audio
         tts_response = generate_wav(input_text, customvoice, WAV_FILE)
         if isinstance(tts_response, dict) and "error" in tts_response:
@@ -186,8 +191,8 @@ def script(input_text, customspeed, customvoice):
         except Exception as e:
             return {"error": f"Video creation failed: {str(e)}"}
 
-        # Merge video and audio
-        os.system(f"bash concat.sh {CAPTION_VIDEO} {FAST_WAV_FILE} {PRE_OUTPUT_VIDEO} {OUTPUT_VIDEO}")
+        # Merge video and audio, output to final_path
+        os.system(f"bash concat.sh {CAPTION_VIDEO} {FAST_WAV_FILE} {PRE_OUTPUT_VIDEO} \"{final_path}\"")
 
         return {"success": "Video generation completed."}
 

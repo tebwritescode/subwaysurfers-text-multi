@@ -1,21 +1,30 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="/static/styles.css" rel="stylesheet">
-    <title>Output</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <title>Text to Tracks</title>
 </head>
-<body>
-    <div class="output-page">
-        <div class="back-button-container">
-            <a href="/" class="back-btn">← Back to Home</a>
-        </div>
-        
-        <div id="video-container">
-            <video controls>
-                <source src="/output" type="video/mp4">
+<body class="video-page">
+    <div class="menu-bar">
+        <a href="{{ url_for('home') }}">Generate</a>
+        <a href="{{ url_for('videos') }}">Browse</a>
+        {% if textfile %}
+            <a href="{{ url_for('view_text', textfile=textfile) }}">View Text</a>
+            <a href="{{ url_for('download_text', textfile=textfile) }}">Download Text</a>
+        {% endif %}
+        {% if source %}
+            <a href="{{ source }}" target="_blank" rel="noopener">Source</a>
+        {% endif %}
+        <span class="spacer"></span>
+        <a href="{{ url_for('download', filename=filename) }}" class="download-btn">Download Video</a>
+    </div>
+    <div class="video-container">
+        <div class="video-wrapper">
+            <video controls autoplay>
+                <source src="{{ url_for('serve_video', filename=filename) }}" type="video/mp4">
                 Your browser does not support the video tag.
             </video>
         </div>

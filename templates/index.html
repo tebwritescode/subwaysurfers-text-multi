@@ -2,40 +2,27 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
     <link href="/static/styles.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-    
     <title>Text to Tracks</title>
-    
-    <style>
-        .flash-messages {
-            width: 80%;
-            max-width: 600px;
-            margin: 0 auto 20px auto;
-            text-align: center;
-        }
-        .flash-message {
-            padding: 12px;
-            margin-bottom: 10px;
-            border-radius: 5px;
-            font-weight: 600;
-        }
-        .flash-message.error {
-            background-color: #ffebee;
-            color: #c62828;
-            border: 1px solid #ef9a9a;
-        }
-        .flash-message.success {
-            background-color: #e1fbe1;
-            color: #2e7d32;
-            border: 1px solid #81c784;
-        }
-    </style>
 </head>
 <body id="indexbody">
+    <div class="menu-bar">
+        <a href="{{ url_for('home') }}">Generate</a>
+        <a href="{{ url_for('videos') }}">Browse</a>
+    </div>
+    <div class="progress-container" id="progress-container">
+        <div class="progress-steps">
+            <div class="progress-step" id="step-extract">Extracting Text</div>
+            <div class="progress-step" id="step-audio">Generating Audio</div>
+            <div class="progress-step" id="step-merge">Merging</div>
+        </div>
+        <div class="progress-bar-bg">
+            <div class="progress-bar" id="progress-bar"></div>
+            <span id="progress-status" class="progress-status">Preparing...</span>
+        </div>
+    </div>
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             <div class="flash-messages">
@@ -45,7 +32,6 @@
             </div>
         {% endif %}
     {% endwith %}
-    
     <form id="textform" action="/submit-form" method="post">
         <textarea id="text_input" name="text_input" placeholder="Enter Article Link or Text"></textarea>
         
@@ -86,22 +72,75 @@
         const speedValue = document.getElementById('speed_value');
         const submitButton = document.getElementById('submit-btn');
         const loadingMessage = document.getElementById('loading-message');
+        const progressContainer = document.getElementById('progress-container');
+        const progressBar = document.getElementById('progress-bar');
+        const progressStatus = document.getElementById('progress-status');
+        const steps = [
+            {id: "step-extract", label: "Extracting Text"},
+            {id: "step-audio", label: "Generating Audio"},
+            {id: "step-merge", label: "Merging Video & Audio"}
+        ];
 
         speedSlider.addEventListener('input', function() {
             speedValue.textContent = this.value;
         });
 
+        function setStepActive(stepIdx) {
+            steps.forEach((step, idx) => {
+                const el = document.getElementById(step.id);
+                el.classList.remove('active', 'done');
+                if (idx < stepIdx) el.classList.add('done');
+                else if (idx === stepIdx) el.classList.add('active');
+            });
+        }
+
         document.getElementById('textform').addEventListener('submit', function() {
             loadingMessage.style.display = "block";
             submitButton.disabled = true;
+            progressContainer.style.display = "flex";
+            progressBar.style.width = "0%";
+            setStepActive(0);
+            progressStatus.textContent = "Extracting text from input...";
+            let progress = 0;
+            let step = 0;
+            let stepProgress = [0, 0, 0];
+            let interval = setInterval(() => {
+                if (step === 0) {
+                    progress += Math.random() * 10 + 10;
+                    if (progress >= 33) {
+                        progress = 33;
+                        setStepActive(1);
+                        progressStatus.textContent = "Generating audio...";
+                        step = 1;
+                    }
+                } else if (step === 1) {
+                    progress += Math.random() * 10 + 10;
+                    if (progress >= 66) {
+                        progress = 66;
+                        setStepActive(2);
+                        progressStatus.textContent = "Merging video and audio...";
+                        step = 2;
+                    }
+                } else if (step === 2) {
+                    progress += Math.random() * 7 + 5;
+                    if (progress >= 90) {
+                        progress = 90;
+                        progressStatus.textContent = "Finalizing...";
+                        clearInterval(interval);
+                    }
+                }
+                progressBar.style.width = progress + "%";
+            }, 600);
+            window.fakeProgressInterval = interval;
         });
 
-        // ✅ Unlock submit button if flash message contains error
         window.onload = function() {
             const errorMessages = document.querySelectorAll('.flash-message.error');
             if (errorMessages.length > 0) {
                 submitButton.disabled = false;
-                loadingMessage.style.display = "none"; // Hide loading message if error occurs
+                loadingMessage.style.display = "none";
+                progressContainer.style.display = "none";
+                if (window.fakeProgressInterval) clearInterval(window.fakeProgressInterval);
             }
         };
     </script>

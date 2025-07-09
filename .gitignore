@@ -5,3 +5,4 @@ static/surf.mp4
 static/.DS_Store
 final.mp4
 static/vosk-model-en-us-0.22
+final_videos/*
