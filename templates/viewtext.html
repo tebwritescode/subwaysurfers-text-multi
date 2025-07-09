@@ -11,7 +11,10 @@
     <div class="menu-bar">
         <a href="{{ url_for('home') }}">Generate</a>
         <a href="{{ url_for('videos') }}">Browse</a>
+        <a href="{{ url_for('download_text', textfile=textfile) }}">Download Text</a>
     </div>
-    <h1>Invalid URL</h1>
+    <div class="text-container">
+        {{ text }}
+    </div>
 </body>
 </html>
