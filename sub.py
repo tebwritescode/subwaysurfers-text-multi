@@ -10,6 +10,7 @@ import random
 import logging
 import sys
 import traceback
+import validators
 
 # Logging Configuration
 logging.basicConfig(
@@ -134,10 +135,14 @@ def script(input_text, customspeed, customvoice):
     """
     try:
         # ✅ Check if input has at least 10 words
-        word_count = len(input_text.split())
-        if word_count < 10:
-            raise ValueError("Input text must contain at least 10 words.")
-        start = time.time()
+        if not validators.url(input_text):
+            logger.info("Text input detected, performing word count validation.")
+            word_count = len(input_text.split())
+            if word_count < 10:
+                raise ValueError("Input text must contain at least 10 words.")
+            start = time.time()
+        else:
+            logger.info("URL detected, skipping word count validation.")
 
         # ✅ Check if VOSK model exists before using it
         model_check = verify_vosk_model()
@@ -153,8 +158,6 @@ def script(input_text, customspeed, customvoice):
 
         os.system(f"bash clean.sh {OUTPUT_VIDEO}")
         
-        # Check text length
-
         # Generate TTS audio
         tts_response = generate_wav(input_text, customvoice, WAV_FILE)
         if isinstance(tts_response, dict) and "error" in tts_response:
