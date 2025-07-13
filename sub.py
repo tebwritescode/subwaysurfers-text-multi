@@ -56,8 +56,8 @@ def get_random_video(directory=SOURCE_VIDEO_DIR):
         if not video_files:
             return {"error": f"No video files found in directory \"{directory}\""}
 
-        # return random.choice(video_files)
-        return "static/surf.mp4"  # For testing purposes, return a specific video file
+        return random.choice(video_files)
+        # return "static/surf.mp4"  # For testing purposes, return a specific video file
     except Exception as e:
         logger.error(f"Error in get_random_video: {str(e)}")
         logger.debug(traceback.format_exc())
