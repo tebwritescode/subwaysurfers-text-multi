@@ -65,3 +65,8 @@ or
 
 ## Running with Docker
 https://hub.docker.com/r/tebwritescode/subwaysurfers-text20
+
+## Planned Features
+- Offloading transcoding to a separate container to allow transcoding on a different server
+- Dropdown to select source video
+- Allow uploading source videos from web client
