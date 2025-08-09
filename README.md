@@ -12,6 +12,9 @@ The application was constructed using a combination of Python, HTML/CSS, Flask, 
 ## Supported Platforms
 The project was tested on macOS and the local server is compatible with Safari, Chrome, and Firefox browsers.
 
+<details>
+  <summary><i>Click to show screenshots</i></summary>
+
 ## Screenshots
 ![Generate](https://teb.codes/2-Code/Docker/Subway-Surfers/Screenshot_2025-07-12_at_5.17.25_PM.png)
 ![Link](https://teb.codes/2-Code/Docker/Subway-Surfers/Screenshot_2025-07-12_at_9.14.47_PM.png)
@@ -19,6 +22,8 @@ The project was tested on macOS and the local server is compatible with Safari, 
 ![View Current 1](https://teb.codes/2-Code/Docker/Subway-Surfers/Screenshot_2025-07-12_at_9.12.03_PM.png)
 ![View Current 2](https://teb.codes/2-Code/Docker/Subway-Surfers/Screenshot_2025-07-12_at_5.17.41_PM.png)
 ![Browse](https://teb.codes/2-Code/Docker/Subway-Surfers/Screenshot_2025-07-12_at_9.29.02_PM.png)
+
+</details>
 
 ## Installation
 
