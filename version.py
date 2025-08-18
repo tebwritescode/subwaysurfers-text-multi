@@ -5,7 +5,7 @@
 # - MINOR: Features being added
 # - PATCH: Steps during troubleshooting, testing and modifications
 
-__version__ = "1.1.16"
+__version__ = "1.1.17"
 
 # Version history:
 # 1.0.0 - Initial versioning system implementation (based on Docker image v20)
@@ -29,3 +29,4 @@ __version__ = "1.1.16"
 # 1.1.14 - FIXED: Restored WhisperASR pipeline for perfect caption timing synchronization
 # 1.1.15 - TIMING: Added 0.25s timing offset to show captions before words are spoken
 # 1.1.16 - CONFIG: Made caption timing offset configurable via CAPTION_TIMING_OFFSET environment variable
+# 1.1.17 - DOCKER: Fixed Docker build by removing problematic dependencies with fallbacks
