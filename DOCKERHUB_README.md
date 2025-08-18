@@ -5,11 +5,21 @@ Transform article links into engaging Subway Surfers-style videos with text-to-s
 ## Quick Start
 
 ```bash
-# Using a directory of videos (random selection)
+# Using TikTok TTS (default)
 docker run -p 5000:5000 \
   -e WHISPER_ASR_URL=http://your-whisper-server:9000 \
   -e CAPTION_TIMING_OFFSET=-0.1 \
   -v /path/to/videos:/app/static \
+  tebwritescode/subwaysurfers-text20:latest
+
+# Using Coqui TTS with custom voices
+docker run -p 5000:5000 \
+  -e WHISPER_ASR_URL=http://your-whisper-server:9000 \
+  -e USE_COQUI_TTS=true \
+  -e COQUI_TTS_ENDPOINT=http://your-coqui-server:5000 \
+  -e SPEAKER_WAV_PATH=/app/voices/morgan_freeman.wav \
+  -v /path/to/videos:/app/static \
+  -v /path/to/voice-samples:/app/voices \
   tebwritescode/subwaysurfers-text20:latest
 
 # Using a specific video file
@@ -31,6 +41,9 @@ docker run -p 5000:5000 \
 | `SOURCE_VIDEO_DIR` | `static` | Path to a video file or directory. If a file, uses that specific video. If a directory, randomly selects from available videos |
 | `FLASK_APP` | `app.py` | Flask application entry point |
 | `DOCKER_ENV` | `true` | Indicates the application is running in a Docker container |
+| `USE_COQUI_TTS` | `false` | Set to `true` to use Coqui TTS instead of TikTok TTS |
+| `COQUI_TTS_ENDPOINT` | `http://localhost:5000` | Coqui TTS server endpoint URL |
+| `SPEAKER_WAV_PATH` | | Path to speaker reference audio for voice cloning |
 
 ## Volume Mounts
 

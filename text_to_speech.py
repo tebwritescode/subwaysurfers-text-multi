@@ -1,4 +1,11 @@
-from tiktokvoice import tts
+import os
+# Use Coqui TTS if enabled, otherwise fallback to TikTok TTS
+USE_COQUI_TTS = os.getenv('USE_COQUI_TTS', 'false').lower() == 'true'
+
+if USE_COQUI_TTS:
+    from coqui_tts import tts
+else:
+    from tiktokvoice import tts
 from pydub import AudioSegment
 from goose3 import Goose
 from cleantext import cleantext
@@ -55,7 +62,7 @@ def generate_wav(article, voice, output_file):
         if not text:
             return {"error": "No readable text content after processing"}
             
-        # Generate TTS and save as MP3 with timeout
+        # Generate TTS and save as audio with timeout
         try:
             import signal
             import threading
@@ -64,7 +71,25 @@ def generate_wav(article, voice, output_file):
             
             def tts_worker():
                 try:
-                    tts(text, voice, "output.mp3")
+                    if USE_COQUI_TTS:
+                        # Handle Coqui TTS with potential voice cloning
+                        coqui_endpoint = os.getenv('COQUI_TTS_ENDPOINT', 'http://localhost:5000')
+                        speaker_wav = os.getenv('SPEAKER_WAV_PATH')  # Optional speaker reference
+                        
+                        # Check if voice is actually a path to an audio file (for voice cloning)
+                        if voice.endswith(('.wav', '.mp3', '.flac')) and os.path.exists(voice):
+                            tts(text, voice, "output.wav", coqui_endpoint=coqui_endpoint, speaker_wav=voice)
+                        else:
+                            tts(text, voice, "output.wav", coqui_endpoint=coqui_endpoint, speaker_wav=speaker_wav)
+                        
+                        # Convert to MP3 for compatibility
+                        if os.path.exists("output.wav"):
+                            sound = AudioSegment.from_wav("output.wav")
+                            sound.export("output.mp3", format="mp3")
+                    else:
+                        # Use TikTok TTS
+                        tts(text, voice, "output.mp3")
+                    
                     tts_result["completed"] = True
                 except Exception as e:
                     tts_result["error"] = str(e)
@@ -73,7 +98,7 @@ def generate_wav(article, voice, output_file):
             thread = threading.Thread(target=tts_worker)
             thread.daemon = True
             thread.start()
-            thread.join(timeout=60)  # 60 second timeout
+            thread.join(timeout=120)  # Increased timeout for Coqui TTS
             
             if thread.is_alive():
                 return {"error": "Text-to-speech generation timed out. Text may be too complex."}
