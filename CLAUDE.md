@@ -27,6 +27,28 @@ Before running the application, ensure these prerequisites are met:
 2. **Background Video**: Place at least one `.mp4` file (e.g., `surf.mp4`) in the `static/` directory
 3. **Python Environment**: Use Python 3.11 or 3.12
 
+## Automated CI/CD
+
+### GitHub Actions Workflows
+
+**Docker Build & Push** (`.github/workflows/docker-build.yml`):
+- ✅ **Trigger**: Every push to `main` branch
+- ✅ **Multi-Architecture**: Supports AMD64 and ARM64
+- ✅ **Auto-Versioning**: Uses version from `version.py` 
+- ✅ **Docker Hub**: Pushes to `tebwritescode/subwaysurfers-text20`
+- ✅ **Tags**: Creates both versioned tag (e.g., `v1.1.16`) and `latest`
+
+**CodeQL Security Analysis** (`.github/workflows/codeql.yml`):
+- ✅ **Trigger**: Push to `main`, PRs, and weekly schedule
+- ✅ **Security Scans**: Advanced security and quality queries
+- ✅ **Vulnerability Detection**: Automated security issue reporting
+
+### Required GitHub Secrets
+
+For automated Docker builds to work, ensure these secrets are set in GitHub repository settings:
+- `DOCKER_USERNAME`: Your Docker Hub username 
+- `DOCKER_PASSWORD`: Your Docker Hub password/token
+
 ## Common Commands
 
 ### Development Server
