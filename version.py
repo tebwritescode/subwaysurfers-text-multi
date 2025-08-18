@@ -5,7 +5,7 @@
 # - MINOR: Features being added
 # - PATCH: Steps during troubleshooting, testing and modifications
 
-__version__ = "1.1.14"
+__version__ = "1.1.15"
 
 # Version history:
 # 1.0.0 - Initial versioning system implementation (based on Docker image v20)
@@ -27,3 +27,4 @@ __version__ = "1.1.14"
 # 1.1.2 - TESTING: Disabled cleantext to isolate timing issues, re-enabled progress bars
 # 1.1.3 - TESTING: Disabled word alignment, using STT words directly like original version
 # 1.1.14 - FIXED: Restored WhisperASR pipeline for perfect caption timing synchronization
+# 1.1.15 - TIMING: Added 0.25s timing offset to show captions before words are spoken
