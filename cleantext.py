@@ -1,5 +1,12 @@
 import re
-def cleantext(text):
+def cleantext_disabled(text):
+    """TEMPORARILY DISABLED - returns text unchanged for testing"""
+    return text
+
+# Temporarily use disabled version for testing
+cleantext = cleantext_disabled
+
+def cleantext_original(text):
     """
     Clean text by replacing elements not suitable for TTS with descriptions.
     Ensures that duplicate placeholders are merged into a single instance.
@@ -26,15 +33,11 @@ def cleantext(text):
             spelled_parts.append(spelled_part)
         return f"[{' Dot '.join(spelled_parts)}]"
     
-    # Limit the size of text to process to prevent DoS attacks
-    MAX_TEXT_LENGTH = 100000  # Set a reasonable limit
-    if len(text) > MAX_TEXT_LENGTH:
-        text = text[:MAX_TEXT_LENGTH] + "[Text truncated due to length]"
+    # Remove the text length limit - we will handle long texts by splitting into sections
         
-    # First, handle markdown code blocks - Fixed with non-backtracking approach
-    # Use a safer approach for code blocks
+    # Remove markdown code blocks entirely
     code_block_pattern = re.compile(r'```(?:[^`]|`(?!``)|``(?!`))*```', re.DOTALL)
-    text = code_block_pattern.sub("[Code block is shown]", text)
+    text = code_block_pattern.sub("", text)
     
     # Handle URLs with safer patterns
     text = re.sub(r'https?://[^\s<>"]{1,2048}', "[A URL is shown]", text)
@@ -45,7 +48,17 @@ def cleantext(text):
     text = re.sub(r'/(?:[a-zA-Z0-9._-]+/){0,10}[a-zA-Z0-9._-]{0,255}', "[A file path is shown]", text)
     
     # Handle email addresses - safer pattern with length limits
-    text = re.sub(r'\b[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]{1,255}\.[A-Z|a-z]{2,63}\b', "[An email address is shown]", text)
+    text = re.sub(r'\b[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]{1,255}\.[A-Z|a-z]{2,63}\b', "[Email address removed]", text)
+    
+    # Handle academic course codes and numbers
+    text = re.sub(r'\b[A-Z]{2,6}\s*[-\s]*\d{2,4}(?:\s*[-\s]*\d{2,4})?\b', "[Course code]", text)
+    
+    # Handle excessive whitespace and formatting
+    text = re.sub(r'\s+', ' ', text)  # Multiple spaces/tabs/newlines to single space
+    text = re.sub(r'[^\w\s,.!?;:\'"-]', ' ', text)  # Remove special formatting chars
+    
+    # Remove repeated patterns that could cause TTS issues
+    text = re.sub(r'(\b\w+\b)\s+\1\s+\1', r'\1', text)  # Remove word repetition
     
     # Handle HTML tags - safer pattern with length limits
     text = re.sub(r'</?[a-zA-Z][a-zA-Z0-9]{0,20}[^>]{0,256}>', "[HTML tag is shown]", text)

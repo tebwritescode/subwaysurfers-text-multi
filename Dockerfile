@@ -1,54 +1,39 @@
 # Use official Python image as the base
-FROM python:3.12-slim
+FROM python:3.13-slim
 
 # Set the working directory inside the container
 WORKDIR /app
 
-# Install dependencies required for Homebrew
+# Install minimal system dependencies for Python packages
 RUN apt-get update && apt-get install -y \
-    curl \
-    git \
-    sudo \
-    procps \
-    build-essential \
-    python3-dev \
-    libffi-dev \
-    libsm6 \
-    libxext6 \
-    libxrender-dev \
     ffmpeg \
-    wget \
-    unzip \
+    curl \
+    gcc \
+    g++ \
+    python3-dev \
+    libxml2-dev \
+    libxslt1-dev \
+    libffi-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# # Install Homebrew
-# RUN /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" \
-#     && echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> /root/.bashrc \
-#     && eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-
-# # Set Homebrew path
-# ENV PATH="/home/linuxbrew/.linuxbrew/bin:${PATH}"
+# Set environment variables for WhisperASR integration
+ENV WHISPER_ASR_URL=http://host.docker.internal:9000
+ENV FLASK_APP=app.py
+ENV DOCKER_ENV=true
 
 # Copy necessary files to /app
 COPY . /app
 
-# Upgrade pip, setuptools, and wheel before installing dependencies
-RUN pip install --upgrade pip setuptools wheel --break-system-packages
+# Upgrade pip and install Python dependencies
+RUN pip install --upgrade pip --break-system-packages
+RUN pip install -r requirements-docker.txt --break-system-packages
 
-# Install required Python dependencies
-RUN pip install -r requirements-pip.txt --break-system-packages
-
-# Install Homebrew dependencies
-# RUN if [ -f requirements-brew.txt ]; then cat requirements-brew.txt | xargs brew install; fi
-
-# Ensure the Vosk English Model is available in the `/app/static` directory
-# RUN wget -O vosk-model.zip https://alphacephei.com/vosk/models/vosk-model-en-us-0.22.zip && \
-#     mkdir -p /app/static/vosk-model && \
-#     unzip vosk-model.zip -d /app/static/ && \
-#     rm vosk-model.zip
+# Create directories for generated videos and ensure proper permissions
+RUN mkdir -p /app/final_videos && \
+    chmod 755 /app/final_videos
 
 # Expose the Flask application's default port
 EXPOSE 5000
 
 # Start the Flask application
-CMD ["flask", "run", "--host=0.0.0.0"]
+CMD ["python", "app.py"]

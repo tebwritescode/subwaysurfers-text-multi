@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="/static/styles.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <title>Processing Video - Text to Tracks</title>
+    <style>
+        /* Animated activity indicator */
+        .activity-indicator {
+            display: inline-block;
+            margin-left: 10px;
+        }
+        
+        .activity-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            margin: 0 2px;
+            background-color: #007bff;
+            border-radius: 50%;
+            animation: pulse 1.4s infinite ease-in-out both;
+        }
+        
+        .activity-dot:nth-child(1) { animation-delay: -0.32s; }
+        .activity-dot:nth-child(2) { animation-delay: -0.16s; }
+        .activity-dot:nth-child(3) { animation-delay: 0; }
+        
+        @keyframes pulse {
+            0%, 80%, 100% {
+                transform: scale(0);
+                opacity: 0.5;
+            }
+            40% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        
+        /* Animated progress bar stripes */
+        .progress-animated {
+            background-image: linear-gradient(
+                45deg,
+                rgba(255,255,255,.15) 25%,
+                transparent 25%,
+                transparent 50%,
+                rgba(255,255,255,.15) 50%,
+                rgba(255,255,255,.15) 75%,
+                transparent 75%,
+                transparent
+            );
+            background-size: 40px 40px;
+            animation: progress-bar-stripes 1s linear infinite;
+        }
+        
+        @keyframes progress-bar-stripes {
+            from { background-position: 40px 0; }
+            to { background-position: 0 0; }
+        }
+        
+        /* Processing spinner */
+        .processing-spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            margin-left: 10px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .processing-active .processing-spinner {
+            display: inline-block;
+        }
+    </style>
+</head>
+<body id="indexbody" class="body">
+    <div class="menu-bar">
+        <a href="{{ url_for('home') }}">Generate</a>
+        <a href="{{ url_for('videos') }}">Browse</a>
+    </div>
+    
+    <div class="progress-container" id="progress-container" style="display: flex;">
+        <div class="progress-steps">
+            <div class="progress-step" id="step-validation">Validation</div>
+            <div class="progress-step" id="step-audio">Audio Generation</div>
+            <div class="progress-step" id="step-video">Video Creation</div>
+            <div class="progress-step" id="step-merge">Merging & Finalizing</div>
+        </div>
+        <div class="progress-bar-bg">
+            <div class="progress-bar" id="progress-bar" style="width: 0%;"></div>
+            <span id="progress-status" class="progress-status">Starting...</span>
+        </div>
+        <div id="progress-percentage" style="margin-top: 10px; text-align: center; font-weight: 600;">0%</div>
+    </div>
+
+    <div id="error-container" style="display: none;">
+        <div class="flash-message error" id="error-message"></div>
+        <a href="{{ url_for('home') }}" class="button">Try Again</a>
+    </div>
+
+    <div style="position: fixed; bottom: 10px; right: 10px; font-size: 0.8em; color: #666; font-family: 'Inter', sans-serif;">
+        v{{ version }}
+    </div>
+
+    <script>
+        const sessionId = '{{ session_id }}';
+        const finalFilename = '{{ final_filename }}';
+        const textFile = '{{ textfile }}';
+        const source = '{{ source }}';
+        const progressBar = document.getElementById('progress-bar');
+        const progressStatus = document.getElementById('progress-status');
+        const progressPercentage = document.getElementById('progress-percentage');
+        const errorContainer = document.getElementById('error-container');
+        const errorMessage = document.getElementById('error-message');
+        const progressContainer = document.getElementById('progress-container');
+
+        const steps = {
+            'validation': 'step-validation',
+            'setup': 'step-validation',
+            'audio': 'step-audio',
+            'processing': 'step-audio',
+            'video': 'step-video',
+            'merge': 'step-merge',
+            'finalizing': 'step-merge',
+            'completed': 'step-merge'
+        };
+
+        function setStepActive(step) {
+            // Reset all steps
+            document.querySelectorAll('.progress-step').forEach(el => {
+                el.classList.remove('active', 'done');
+            });
+
+            // Mark completed steps as done and current as active
+            const stepOrder = ['step-validation', 'step-audio', 'step-video', 'step-merge'];
+            const currentStepId = steps[step] || 'step-validation';
+            const currentIndex = stepOrder.indexOf(currentStepId);
+
+            stepOrder.forEach((stepId, index) => {
+                const el = document.getElementById(stepId);
+                if (index < currentIndex) {
+                    el.classList.add('done');
+                } else if (index === currentIndex) {
+                    el.classList.add('active');
+                }
+            });
+        }
+
+        function showError(error) {
+            progressContainer.style.display = 'none';
+            errorMessage.textContent = error;
+            errorContainer.style.display = 'block';
+        }
+
+        function redirectToOutput() {
+            let url = `/output?filename=${encodeURIComponent(finalFilename)}&textfile=${encodeURIComponent(textFile)}`;
+            if (source && source !== 'None') {
+                url += `&source=${encodeURIComponent(source)}`;
+            }
+            window.location.href = url;
+        }
+
+        // Connect to Server-Sent Events
+        const eventSource = new EventSource(`/progress/${sessionId}`);
+        
+        eventSource.onmessage = function(event) {
+            try {
+                const data = JSON.parse(event.data);
+                
+                if (data.error) {
+                    showError(data.error);
+                    eventSource.close();
+                    return;
+                }
+
+                if (data.heartbeat) {
+                    return; // Just a keepalive
+                }
+
+                if (data.progress !== undefined) {
+                    progressBar.style.width = data.progress + '%';
+                    progressPercentage.textContent = Math.round(data.progress) + '%';
+                }
+
+                if (data.step) {
+                    setStepActive(data.step);
+                }
+
+                if (data.message) {
+                    progressStatus.textContent = data.message;
+                }
+
+                if (data.step === 'completed' && data.progress >= 100) {
+                    setTimeout(() => {
+                        redirectToOutput();
+                    }, 1000);
+                    eventSource.close();
+                }
+            } catch (e) {
+                console.error('Error parsing progress data:', e);
+            }
+        };
+
+        eventSource.onerror = function(event) {
+            console.error('EventSource error:', event);
+            showError('Connection lost. Please refresh the page.');
+        };
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function() {
+            eventSource.close();
+        });
+
+        // Set initial state
+        setStepActive('validation');
+    </script>
+</body>
+</html>

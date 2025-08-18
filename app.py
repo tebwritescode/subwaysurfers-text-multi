@@ -18,10 +18,35 @@ import sys
 from sub import script
 from datetime import datetime
 import validators
+from version import __version__
+import json
+import time
+import threading
+import queue
 
 # Initialize Flask application
 app = Flask(__name__)
 app.secret_key = os.urandom(24)  # Secret key for session-based flash messages
+
+# Global progress tracking
+progress_queues = {}  # session_id -> queue for progress updates
+
+# Global error handlers
+@app.errorhandler(500)
+def internal_error(error):
+    app.logger.error(f"Internal server error: {error}")
+    flash("An internal server error occurred. The application is recovering.", "error")
+    return redirect(url_for('home')), 500
+
+@app.errorhandler(404)
+def not_found_error(error):
+    return redirect(url_for('home')), 404
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    app.logger.error(f"Unhandled exception: {traceback.format_exc()}")
+    flash("An unexpected error occurred. Please try again.", "error")
+    return redirect(url_for('home')), 500
 
 
 class ScriptExecutionError(Exception):
@@ -41,7 +66,42 @@ def home():
     """
     Render the home page with the input form.
     """
-    return render_template('index.html')
+    return render_template('index.html', version=__version__)
+
+@app.route('/progress/<session_id>')
+def progress_stream(session_id):
+    """
+    Server-Sent Events endpoint for real-time progress updates.
+    """
+    def generate_progress():
+        if session_id not in progress_queues:
+            yield f"data: {json.dumps({'error': 'Invalid session'})}\n\n"
+            return
+            
+        progress_queue = progress_queues[session_id]
+        
+        while True:
+            try:
+                # Wait for progress update with timeout
+                progress_data = progress_queue.get(timeout=30)
+                if progress_data is None:  # Signal to stop
+                    break
+                yield f"data: {json.dumps(progress_data)}\n\n"
+            except queue.Empty:
+                # Keep connection alive with heartbeat
+                yield f"data: {json.dumps({'heartbeat': True})}\n\n"
+            except:
+                break
+        
+        # Cleanup
+        if session_id in progress_queues:
+            del progress_queues[session_id]
+    
+    return Response(generate_progress(), mimetype='text/event-stream', headers={
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'X-Accel-Buffering': 'no'
+    })
 
 @app.route('/submit-form', methods=['POST'])
 def submit_form():
@@ -66,8 +126,10 @@ def submit_form():
         # Get selected voice, default to 'en_us_006' if not provided
         customvoice = str(request.form.get('voice', "en_us_006"))
 
-        # Generate a unique filename for this run
+        # Generate a unique session ID and filename for this run
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        session_id = f"{timestamp}_{customspeed}_{customvoice.replace('/', '_')}"
+        
         # Add speed and voice to filename for clarity
         safe_voice = customvoice.replace("/", "_")
         final_filename = f"{timestamp}_speed{customspeed}_voice{safe_voice}_final.mp4"
@@ -79,25 +141,63 @@ def submit_form():
         with open(text_path, "w", encoding="utf-8") as f:
             f.write(text_input)
 
-        # Run external script and handle possible errors
-        try:
-            result = script(text_input, customspeed, customvoice, final_path)
-            if result and 'error' in result:
-                raise ScriptExecutionError(result['error'])
-        except ScriptExecutionError as e:
-            app.logger.error(f"Script execution error: {str(e)}")
-            flash(f"Error in processing: {str(e)}", "error")
-            return redirect(url_for('home'))
-        except Exception as e:
-            app.logger.error(f"Unexpected script error: {traceback.format_exc()}")
-            flash(f"An internal error occurred: {str(e)}", "error")
-            return redirect(url_for('home'))
+        # Create progress queue for this session
+        progress_queue = queue.Queue()
+        progress_queues[session_id] = progress_queue
+
+        def run_script_with_progress():
+            """Run the script in a separate thread with progress updates."""
+            try:
+                # Run script with timeout protection using threading
+                start_time = time.time()
+                max_duration = 600  # 10 minutes
+                
+                result = script(text_input, customspeed, customvoice, final_path, progress_queue)
+                
+                # Check if we exceeded maximum time
+                elapsed_time = time.time() - start_time
+                if elapsed_time > max_duration:
+                    app.logger.warning(f"Script completed but took {elapsed_time:.1f} seconds (max: {max_duration})")
+                
+                if result and 'error' in result:
+                    progress_queue.put({'error': result['error'], 'step': 'error'})
+                else:
+                    progress_queue.put({'progress': 100, 'step': 'completed', 'message': 'Video generation completed!'})
+                    
+            except Exception as e:
+                app.logger.error(f"Script error: {traceback.format_exc()}")
+                # Provide user-friendly error messages
+                error_msg = str(e)
+                if "No such file" in error_msg:
+                    error_msg = "Missing required files. Please check video files and Vosk model."
+                elif "Permission denied" in error_msg:
+                    error_msg = "Permission error. Please check file permissions."
+                elif "Memory" in error_msg or "memory" in error_msg:
+                    error_msg = "Out of memory. Please try with shorter text or restart the application."
+                elif "timeout" in error_msg.lower():
+                    error_msg = "Video generation timed out. Please try with shorter text."
+                else:
+                    error_msg = f"Processing error: {error_msg}"
+                
+                progress_queue.put({'error': error_msg, 'step': 'error'})
+            finally:
+                progress_queue.put(None)  # Signal end of stream
+
+        # Start script in background thread
+        script_thread = threading.Thread(target=run_script_with_progress)
+        script_thread.daemon = True
+        script_thread.start()
 
         # If input was a URL, pass it to the output page for a source button
         source_url = text_input if validators.url(text_input) else None
 
-        # On success, redirect to output page with filename, text file, and source if any
-        return redirect(url_for('output', filename=final_filename, textfile=text_filename, source=source_url))
+        # Return progress page that will track completion and redirect when done
+        return render_template('progress.html', 
+                             session_id=session_id,
+                             final_filename=final_filename,
+                             textfile=text_filename,
+                             source=source_url,
+                             version=__version__)
 
     except Exception as e:
         app.logger.error(f"Unexpected error in submit_form: {traceback.format_exc()}")
@@ -123,7 +223,7 @@ def output():
     textfile_path = os.path.join(FINAL_VIDEOS_DIR, textfile) if textfile else None
     if textfile and not os.path.exists(textfile_path):
         textfile = None
-    return render_template('output.html', filename=filename, textfile=textfile, source=source)
+    return render_template('output.html', filename=filename, textfile=textfile, source=source, version=__version__)
 
 @app.route('/viewtext/<textfile>')
 def view_text(textfile):
@@ -136,7 +236,7 @@ def view_text(textfile):
         return redirect(url_for('home'))
     with open(file_path, "r", encoding="utf-8") as f:
         content = f.read()
-    return render_template("viewtext.html", text=content, textfile=textfile)
+    return render_template("viewtext.html", text=content, textfile=textfile, version=__version__)
 
 @app.route('/downloadtext/<textfile>')
 def download_text(textfile):
@@ -151,7 +251,7 @@ def videos():
     Basic file browser for all generated videos.
     """
     files = sorted(os.listdir(FINAL_VIDEOS_DIR), reverse=True)
-    return render_template('videos.html', files=files)
+    return render_template('videos.html', files=files, version=__version__)
 
 @app.route('/download/<filename>')
 def download(filename):
@@ -260,5 +360,5 @@ if __name__ == '__main__':
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         handlers=[logging.StreamHandler(sys.stdout)]
     )
-    # Start the Flask app
-    app.run(threaded=True, debug=False)
+    # Start the Flask app with proper host binding
+    app.run(host='0.0.0.0', port=5001, threaded=True, debug=False)
