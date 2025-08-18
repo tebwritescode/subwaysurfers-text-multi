@@ -360,5 +360,6 @@ if __name__ == '__main__':
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         handlers=[logging.StreamHandler(sys.stdout)]
     )
-    # Start the Flask app with proper host binding
-    app.run(host='0.0.0.0', port=5001, threaded=True, debug=False)
+    # Start the Flask app with proper host binding  
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, threaded=True, debug=False)
