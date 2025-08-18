@@ -36,23 +36,24 @@
         <textarea id="text_input" name="text_input" placeholder="Enter Article Link or Text"></textarea>
         
         <div class="voice-selection">
-            <label for="voice">Select Voice:</label>
+            <label for="voice">Select Voice: 
+                <span class="tts-system-indicator">({{ tts_system }})</span>
+            </label>
             <select id="voice" name="voice">
-                <option value="en_us_006">US Male</option>
-                <option value="en_us_001">US Female</option>
-                <option value="en_us_ghostface">Ghost Face</option>
-                <option value="en_us_chewbacca">Chewy</option>
-                <option value="en_us_c3po">C3P0</option>
-                <option value="en_us_stitch">Stitch</option>
-                <option value="en_us_stormtrooper">Stormtrooper</option>
-                <option value="en_us_rocket">Rocket</option>
-                <option value="en_au_002">Australian Male</option>
-                <option value="en_au_001">Australian Female</option>
-                <option value="en_uk_001">UK Male</option>
-                <option value="en_female_emotional">Peaceful</option>
-                <option value="en_female_f08_salut_damour">Alto</option>
-                <option value="en_male_m03_lobby">Tenor</option>
+                {% for voice in voices %}
+                <option value="{{ voice.value }}" 
+                        title="{{ voice.description }}"
+                        {% if loop.first %}selected{% endif %}>
+                    {{ voice.name }}
+                    {% if voice.get('type') == 'bark' %}🎭{% endif %}
+                </option>
+                {% endfor %}
             </select>
+            {% if use_pytorch_tts %}
+            <div class="voice-info">
+                <small>🎭 Bark voices support emotions and natural speech patterns</small>
+            </div>
+            {% endif %}
         </div>
         
         <div class="speed-control">

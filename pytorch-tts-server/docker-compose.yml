@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  pytorch-tts:
+    build: .
+    container_name: pytorch-tts-server
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - HOST=0.0.0.0
+      # Pre-load common models (optional)
+      - PRELOAD_MODELS=microsoft/speecht5_tts,facebook/mms-tts-eng
+      # GPU support (uncomment if using GPU)
+      # - NVIDIA_VISIBLE_DEVICES=all
+    volumes:
+      # Cache models to avoid re-downloading
+      - pytorch_tts_cache:/root/.cache/huggingface
+      # Custom models directory (optional)
+      - ./models:/app/models
+    restart: unless-stopped
+    # Uncomment for GPU support
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+volumes:
+  pytorch_tts_cache:
+    driver: local

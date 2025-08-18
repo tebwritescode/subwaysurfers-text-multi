@@ -1,0 +1,153 @@
+version: '3.8'
+
+# Complete Local Subway Surfers Stack
+# All services run locally with no external dependencies
+
+services:
+  # Main Subway Surfers Application
+  subway-surfers-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: subway-surfers-app
+    ports:
+      - "5001:5000"
+    environment:
+      # App settings
+      - PORT=5000
+      - FLASK_APP=app.py
+      - DOCKER_ENV=true
+      
+      # TTS Configuration - Use AllTalk TTS server  
+      - PYTORCH_TTS_ENDPOINT=http://alltalk-tts:7851
+      - PYTORCH_TTS_MODEL=suno/bark
+      
+      # ASR Configuration - Use local Whisper server
+      - WHISPER_ASR_URL=http://whisper-asr:9000
+      - CAPTION_TIMING_OFFSET=0.0
+      
+      # Video settings
+      - SOURCE_VIDEO_DIR=static
+      - MODEL_PATH=static/vosk-model-en-us-0.22
+      
+    volumes:
+      # Mount video files and models
+      - ./static:/app/static
+      - ./final_videos:/app/final_videos
+      - subway_models:/app/models
+    depends_on:
+      - alltalk-tts
+      - whisper-asr
+    restart: unless-stopped
+    networks:
+      - subway-network
+
+  # AllTalk TTS Server (Coqui TTS with API)
+  # Supports XTTS, voice cloning, and multiple languages
+  alltalk-tts:
+    image: erew123/alltalk_tts:latest
+    container_name: alltalk-tts-server
+    ports:
+      - "7851:7851"  # AllTalk TTS API
+      - "8000:7851"  # Map to our expected TTS endpoint
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      # Persist models and voices
+      - alltalk_models:/app/models
+      - alltalk_outputs:/app/outputs
+      - ./voices:/app/voices  # Mount for custom voices
+    restart: unless-stopped
+    networks:
+      - subway-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:7851/api/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    # Uncomment for GPU support
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+  # Whisper ASR Server
+  whisper-asr:
+    build:
+      context: ./whisper-asr-server
+      dockerfile: Dockerfile  
+    container_name: whisper-asr-server
+    ports:
+      - "9000:9000"
+    environment:
+      - PORT=9000
+      - HOST=0.0.0.0
+      # Pre-load base model (good balance of speed/quality)
+      - PRELOAD_MODEL=base
+    volumes:
+      # Cache Whisper models
+      - whisper_cache:/root/.cache/whisper
+      - ./temp:/app/temp
+    restart: unless-stopped
+    networks:
+      - subway-network
+    # Uncomment for GPU support  
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+  # Optional: Redis for caching (uncomment to enable)
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: subway-redis
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis_data:/data
+  #   restart: unless-stopped
+  #   networks:
+  #     - subway-network
+
+  # Optional: Monitoring with Grafana (uncomment to enable)
+  # grafana:
+  #   image: grafana/grafana:latest
+  #   container_name: subway-grafana
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     - GF_SECURITY_ADMIN_PASSWORD=admin
+  #   volumes:
+  #     - grafana_data:/var/lib/grafana
+  #   restart: unless-stopped
+  #   networks:
+  #     - subway-network
+
+networks:
+  subway-network:
+    driver: bridge
+    name: subway-local-network
+
+volumes:
+  # Model caches and data
+  alltalk_models:
+    driver: local
+  alltalk_outputs:
+    driver: local
+  whisper_cache:
+    driver: local
+  subway_models:
+    driver: local
+  
+  # Optional volumes
+  # redis_data:
+  #   driver: local
+  # grafana_data:
+  #   driver: local
