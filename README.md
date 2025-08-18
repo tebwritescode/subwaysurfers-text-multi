@@ -70,7 +70,47 @@ or
 10. Paste the article link you wish to convert into the text box and click `Submit`. While video generation may take some time, the terminal will indicate the program is functioning. If prompted to override any files, proceed to override them.
 
 ## Running with Docker
+
+### Quick Start
+```bash
+# Using a directory of videos (random selection)
+docker run -p 5000:5000 \
+  -e WHISPER_ASR_URL=http://your-whisper-server:9000 \
+  -e CAPTION_TIMING_OFFSET=-0.1 \
+  -v /path/to/videos:/app/static \
+  tebwritescode/subwaysurfers-text20:latest
+
+# Using a specific video file
+docker run -p 5000:5000 \
+  -e WHISPER_ASR_URL=http://your-whisper-server:9000 \
+  -e SOURCE_VIDEO_DIR=/app/static/surf.mp4 \
+  -v /path/to/videos:/app/static \
+  tebwritescode/subwaysurfers-text20:latest
+```
+
+### Docker Hub
 https://hub.docker.com/r/tebwritescode/subwaysurfers-text20
+
+### Environment Variables
+
+The Docker container accepts the following environment variables:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `WHISPER_ASR_URL` | `http://host.docker.internal:9000` | URL of the WhisperASR server for speech-to-text caption timing synchronization |
+| `PORT` | `5000` | Port number for the Flask web server |
+| `CAPTION_TIMING_OFFSET` | `0.0` | Timing offset in seconds for caption display (negative values show captions earlier) |
+| `MODEL_PATH` | `static/vosk-model-en-us-0.22` | Path to the Vosk speech recognition model |
+| `SOURCE_VIDEO_DIR` | `static` | Path to a video file or directory. If a file, uses that specific video. If a directory, randomly selects from available videos |
+| `FLASK_APP` | `app.py` | Flask application entry point |
+| `DOCKER_ENV` | `true` | Indicates the application is running in a Docker container |
+
+### Volume Mounts
+
+Mount your video files to `/app/static` to make them available to the application:
+```bash
+-v /path/to/your/videos:/app/static
+```
 
 ## Planned Features
 - Offloading transcoding to a separate container to allow transcoding on a different server
