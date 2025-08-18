@@ -2,7 +2,7 @@ from tiktokvoice import tts
 from pydub import AudioSegment
 from goose3 import Goose
 from cleantext import cleantext
-import os, audioread
+import os, audioread, subprocess
 import validators
 
 def generate_wav(article, voice, output_file):
@@ -90,8 +90,15 @@ def generate_wav(article, voice, output_file):
             
         # Convert MP3 to WAV format
         try:
-            sound = AudioSegment.from_mp3("output.mp3")
-            sound.export(output_file, format="wav")
+            if PYDUB_AVAILABLE:
+                sound = AudioSegment.from_mp3("output.mp3")
+                sound.export(output_file, format="wav")
+            else:
+                # Use FFmpeg directly when pydub is not available
+                ffmpeg_cmd = ["ffmpeg", "-i", "output.mp3", "-y", output_file]
+                result = subprocess.run(ffmpeg_cmd, capture_output=True, text=True)
+                if result.returncode != 0:
+                    return {"error": f"FFmpeg conversion failed: {result.stderr}"}
         except Exception as e:
             return {"error": f"Audio format conversion failed: {str(e)}"}
             

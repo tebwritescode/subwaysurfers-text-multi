@@ -4,7 +4,15 @@
 # version: 1.2
 import requests, base64, re, sys
 from threading import Thread
-from playsound import playsound
+
+# Optional playsound import (not needed in Docker/server environments)
+try:
+    from playsound import playsound
+    PLAYSOUND_AVAILABLE = True
+except ImportError:
+    PLAYSOUND_AVAILABLE = False
+    def playsound(*args, **kwargs):
+        pass  # No-op when playsound is not available
 
 # define the endpoint data with URLs and corresponding response keys
 ENDPOINT_DATA = [
