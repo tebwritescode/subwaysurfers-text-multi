@@ -5,6 +5,9 @@ from cleantext import cleantext
 import os, audioread, subprocess
 import validators
 
+# Pydub should be available since it's in requirements
+PYDUB_AVAILABLE = True
+
 def generate_wav(article, voice, output_file):
     """
     Generate a WAV audio file from text or article URL using text-to-speech.

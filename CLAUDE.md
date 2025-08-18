@@ -15,6 +15,11 @@ Key todo list guidelines:
 - Never push to main branch or update dockerhub latest tag without explicit instruction
 - General code cleanup tasks should be deferred until specifically requested
 
+## Dependency and Version Management
+
+- Never remove dependencies without confirming they are no longer needed
+- Never add text to the versions, increment the version number as documented
+
 ## Overview
 
 This is a Flask web application that converts article links or text into engaging Subway Surfers-style videos with text-to-speech narration. The application extracts text from URLs, generates speech using TikTok voices, creates synchronized captions, and overlays them on gameplay footage.
