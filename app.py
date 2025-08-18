@@ -15,6 +15,7 @@ import os
 from urllib.parse import quote
 import traceback
 import sys
+import requests
 from sub import script
 from datetime import datetime
 import validators
@@ -30,6 +31,78 @@ app.secret_key = os.urandom(24)  # Secret key for session-based flash messages
 
 # Global progress tracking
 progress_queues = {}  # session_id -> queue for progress updates
+
+# Voice system configuration
+PYTORCH_TTS_ENDPOINT = os.getenv('PYTORCH_TTS_ENDPOINT')
+USE_PYTORCH_TTS = bool(PYTORCH_TTS_ENDPOINT)
+
+# Default TikTok TTS voices (fallback)
+DEFAULT_TIKTOK_VOICES = [
+    {"value": "en_us_006", "name": "US Male", "description": "American male voice"},
+    {"value": "en_us_001", "name": "US Female", "description": "American female voice"},
+    {"value": "en_us_ghostface", "name": "Ghost Face", "description": "Spooky character voice"},
+    {"value": "en_us_chewbacca", "name": "Chewy", "description": "Chewbacca character"},
+    {"value": "en_us_c3po", "name": "C3P0", "description": "C3PO droid voice"},
+    {"value": "en_us_stitch", "name": "Stitch", "description": "Stitch character"},
+    {"value": "en_us_stormtrooper", "name": "Stormtrooper", "description": "Imperial trooper"},
+    {"value": "en_us_rocket", "name": "Rocket", "description": "Rocket Raccoon"},
+    {"value": "en_au_002", "name": "Australian Male", "description": "Australian accent male"},
+    {"value": "en_au_001", "name": "Australian Female", "description": "Australian accent female"},
+    {"value": "en_uk_001", "name": "UK Male", "description": "British accent male"},
+    {"value": "en_female_emotional", "name": "Peaceful", "description": "Emotional female voice"},
+    {"value": "en_female_f08_salut_damour", "name": "Alto", "description": "Singing alto voice"},
+    {"value": "en_male_m03_lobby", "name": "Tenor", "description": "Singing tenor voice"}
+]
+
+def get_available_voices():
+    """
+    Fetch available voices from PyTorch TTS server or return default TikTok voices.
+    Returns list of voice dictionaries with value, name, and description.
+    """
+    if USE_PYTORCH_TTS:
+        try:
+            # Try to fetch voices from PyTorch TTS server
+            response = requests.get(f"{PYTORCH_TTS_ENDPOINT}/voices", timeout=5)
+            if response.status_code == 200:
+                data = response.json()
+                
+                # Convert PyTorch TTS voice format to our format
+                pytorch_voices = []
+                voice_details = data.get('details', {})
+                
+                # Priority voices (recommended ones)
+                recommended = data.get('recommended', [])
+                for voice in recommended:
+                    if voice in voice_details:
+                        pytorch_voices.append({
+                            "value": voice,
+                            "name": voice_details[voice].get('name', voice.title()),
+                            "description": voice_details[voice].get('description', f"Bark {voice} voice"),
+                            "type": "bark"
+                        })
+                
+                # Add other voices
+                for voice, details in voice_details.items():
+                    if voice not in recommended:
+                        pytorch_voices.append({
+                            "value": voice,
+                            "name": details.get('name', voice.title()),
+                            "description": details.get('description', f"Bark {voice} voice"),
+                            "type": "bark"
+                        })
+                
+                if pytorch_voices:
+                    print(f"✅ Using {len(pytorch_voices)} PyTorch TTS (Bark) voices")
+                    return pytorch_voices
+                    
+        except requests.RequestException as e:
+            print(f"⚠️ PyTorch TTS server not available: {e}")
+        except Exception as e:
+            print(f"⚠️ Error fetching PyTorch voices: {e}")
+    
+    # Fallback to TikTok voices
+    print(f"📢 Using {len(DEFAULT_TIKTOK_VOICES)} TikTok TTS voices (fallback)")
+    return DEFAULT_TIKTOK_VOICES
 
 # Global error handlers
 @app.errorhandler(500)
@@ -64,9 +137,16 @@ os.makedirs(FINAL_VIDEOS_DIR, exist_ok=True)
 @app.route('/')
 def home():
     """
-    Render the home page with the input form.
+    Render the home page with the input form and available voices.
     """
-    return render_template('index.html', version=__version__)
+    voices = get_available_voices()
+    tts_system = "PyTorch TTS (Bark)" if USE_PYTORCH_TTS else "TikTok TTS"
+    
+    return render_template('index.html', 
+                         version=__version__, 
+                         voices=voices,
+                         tts_system=tts_system,
+                         use_pytorch_tts=USE_PYTORCH_TTS)
 
 @app.route('/progress/<session_id>')
 def progress_stream(session_id):

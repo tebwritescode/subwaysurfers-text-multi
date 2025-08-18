@@ -8,6 +8,8 @@
     --background-end: #414345;
     --text-color: #ffffff;
     --surface-color: rgba(26, 26, 26, 0.8);
+    --bark-color: #e67e22;
+    --tiktok-color: #ff0050;
 }
 
 body {
@@ -115,6 +117,38 @@ textarea:focus, select:focus {
 .speed-control label {
     color: var(--text-color);
     font-weight: 600;
+}
+
+/* Voice Selection Styling */
+.voice-selection {
+    margin-bottom: 1.5em;
+}
+
+.voice-selection label {
+    display: block;
+    margin-bottom: 0.5em;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.tts-system-indicator {
+    font-size: 0.9em;
+    padding: 0.2em 0.6em;
+    border-radius: 6px;
+    font-weight: 500;
+    opacity: 0.8;
+    background: var(--bark-color);
+    color: white;
+}
+
+.voice-info {
+    margin-top: 0.5em;
+    text-align: center;
+}
+
+.voice-info small {
+    color: var(--bark-color);
+    font-weight: 500;
 }
 
 /* Progress Bar */

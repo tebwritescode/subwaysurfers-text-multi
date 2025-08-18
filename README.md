@@ -145,22 +145,24 @@ Access the application at `http://localhost:5000`
 ### Docker Deployment
 
 ```bash
-# Using Docker Hub image with TikTok TTS (default)
+# Using TikTok TTS (default - no external server needed)
 docker run -p 5000:5000 \
   -e WHISPER_ASR_URL=http://your-whisper-server:9000 \
   -e CAPTION_TIMING_OFFSET=-0.1 \
   -v /path/to/videos:/app/static \
   tebwritescode/subwaysurfers-text20:latest
 
-# Using Docker Hub image with Coqui TTS
+# Using external PyTorch TTS server with custom voices
 docker run -p 5000:5000 \
   -e WHISPER_ASR_URL=http://your-whisper-server:9000 \
-  -e USE_COQUI_TTS=true \
-  -e COQUI_TTS_ENDPOINT=http://your-coqui-server:5000 \
-  -e SPEAKER_WAV_PATH=/app/voices/morgan_freeman.wav \
+  -e PYTORCH_TTS_ENDPOINT=http://your-pytorch-tts:8000 \
+  -e PYTORCH_TTS_MODEL=drewThomasson/Morgan_freeman_xtts_model \
+  -e SPEAKER_EMBEDDING_PATH=/app/embeddings/morgan_freeman.bin \
   -v /path/to/videos:/app/static \
-  -v /path/to/voice-samples:/app/voices \
+  -v /path/to/embeddings:/app/embeddings \
   tebwritescode/subwaysurfers-text20:latest
+
+# Using a specific video file
 
 # Using Docker Compose
 docker-compose up -d
@@ -178,12 +180,7 @@ docker-compose up -d
 5. Click "Generate" and watch real-time progress
 6. Download or view the generated video
 
-### **Voice Options**
-- **Jessie**: Female, upbeat and energetic
-- **Brian**: Male, British accent
-- **Stitch**: Quirky character voice
-- **Echo**: Deep, dramatic narration
-- **And more!** Multiple TikTok voices available
+<<<<<<< Updated upstream
 
 ### **Background Videos**
 The application randomly selects from:

@@ -1,0 +1,33 @@
+# PyTorch TTS Server Requirements
+torch>=2.0.0
+torchaudio>=2.0.0
+transformers>=4.30.0
+accelerate>=0.20.0
+datasets>=2.12.0
+soundfile>=0.12.1
+librosa>=0.10.0
+numpy>=1.24.0
+scipy>=1.10.0
+fastapi>=0.100.0
+uvicorn[standard]>=0.23.0
+python-multipart>=0.0.6
+pydantic>=2.0.0
+httpx>=0.24.0
+aiofiles>=23.0.0
+Pillow>=10.0.0
+# Hugging Face models
+diffusers>=0.18.0
+# Voice processing
+phonemizer>=3.2.1
+espeak-ng
+# Optional: Coqui TTS for XTTS models
+TTS>=0.15.0
+# Audio processing
+pydub>=0.25.1
+# Monitoring and logging
+psutil>=5.9.0
+# Model caching
+huggingface-hub>=0.16.0
+# GPU support (will be ignored on CPU-only systems)
+--extra-index-url https://download.pytorch.org/whl/cu118
+torch-audio>=2.0.0
