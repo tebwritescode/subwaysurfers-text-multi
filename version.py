@@ -5,7 +5,7 @@
 # - MINOR: Features being added
 # - PATCH: Steps during troubleshooting, testing and modifications
 
-__version__ = "1.1.19"
+__version__ = "1.1.20"
 
 # Version history:
 # 1.0.0 - Initial versioning system implementation (based on Docker image v20)
@@ -32,3 +32,4 @@ __version__ = "1.1.19"
 # 1.1.17 - DOCKER: Fixed Docker build by removing problematic dependencies with fallbacks
 # 1.1.18 - DOCKER: Fixed build by using Python 3.12 and complete original requirements per README
 # 1.1.19 - FIXED: Restored proper pydub import and PYDUB_AVAILABLE variable definition
+# 1.1.20 - FIXED: Updated CodeQL workflow to use v3 (v2 deprecated), resolved SARIF processing issues
