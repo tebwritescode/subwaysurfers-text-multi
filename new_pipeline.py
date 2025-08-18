@@ -94,7 +94,8 @@ def add_captions_to_video(base_video_path, words, timestamps, output_video_path)
     thickness = 5
     outline_thickness = 10
     
-    # Create word schedule with Whisper timestamps
+    # Create word schedule with Whisper timestamps (adjusted 0.25s earlier for better sync)
+    TIMING_OFFSET = -0.25  # Show captions 0.25s before the word is spoken
     word_schedule = []
     for i, (word, start_time) in enumerate(zip(words, timestamps)):
         # Calculate end time for this word
@@ -103,19 +104,23 @@ def add_captions_to_video(base_video_path, words, timestamps, output_video_path)
         else:
             end_time = start_time + 1.0  # Show last word for 1 second
         
-        start_frame = int(start_time * fps)
-        end_frame = int(end_time * fps)
+        # Apply timing offset - show captions earlier
+        adjusted_start_time = max(0, start_time + TIMING_OFFSET)  # Don't go negative
+        adjusted_end_time = max(adjusted_start_time + 0.1, end_time + TIMING_OFFSET)  # Minimum 0.1s duration
+        
+        start_frame = int(adjusted_start_time * fps)
+        end_frame = int(adjusted_end_time * fps)
         
         word_schedule.append({
             'word': word,
             'start_frame': start_frame,
             'end_frame': end_frame,
-            'start_time': start_time,
-            'end_time': end_time
+            'start_time': adjusted_start_time,
+            'end_time': adjusted_end_time
         })
         
         if i < 10:  # Log first 10 words
-            logger.info(f"Word {i}: '{word}' from {start_time:.2f}s to {end_time:.2f}s (frames {start_frame}-{end_frame})")
+            logger.info(f"Word {i}: '{word}' from {adjusted_start_time:.2f}s to {adjusted_end_time:.2f}s (frames {start_frame}-{end_frame}) [offset: {TIMING_OFFSET}s]")
     
     logger.info(f"Processing {total_frames} frames with {len(word_schedule)} words...")
     
