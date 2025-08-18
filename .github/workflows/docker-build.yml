@@ -13,6 +13,10 @@ env:
   REGISTRY: docker.io
   IMAGE_NAME: tebwritescode/subwaysurfers-text20
 
+concurrency:
+  group: docker-build
+  cancel-in-progress: true
+
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
