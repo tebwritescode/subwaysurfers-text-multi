@@ -19,6 +19,8 @@ Key todo list guidelines:
 
 - Never remove dependencies without confirming they are no longer needed
 - Never add text to the versions, increment the version number as documented
+- A docker image version and release should ALWAYS match the github version that's the same version
+- The github release for 1.1.20 is docker image 1.1.19 that doesn't make sense and needs fixing
 
 ## Overview
 
