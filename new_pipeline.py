@@ -94,8 +94,8 @@ def add_captions_to_video(base_video_path, words, timestamps, output_video_path)
     thickness = 5
     outline_thickness = 10
     
-    # Create word schedule with Whisper timestamps (adjusted 0.25s earlier for better sync)
-    TIMING_OFFSET = -0.25  # Show captions 0.25s before the word is spoken
+    # Create word schedule with Whisper timestamps (configurable timing offset)
+    TIMING_OFFSET = float(os.getenv('CAPTION_TIMING_OFFSET', '0.0'))  # Configurable caption timing offset
     word_schedule = []
     for i, (word, start_time) in enumerate(zip(words, timestamps)):
         # Calculate end time for this word
