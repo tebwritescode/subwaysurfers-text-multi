@@ -5,7 +5,7 @@
 # - MINOR: Features being added
 # - PATCH: Steps during troubleshooting, testing and modifications
 
-__version__ = "1.1.20"
+__version__ = "1.1.21"
 
 # Version history:
 # 1.0.0 - Initial versioning system implementation (based on Docker image v20)
@@ -33,3 +33,4 @@ __version__ = "1.1.20"
 # 1.1.18 - DOCKER: Fixed build by using Python 3.12 and complete original requirements per README
 # 1.1.19 - FIXED: Restored proper pydub import and PYDUB_AVAILABLE variable definition
 # 1.1.20 - FIXED: Updated CodeQL workflow to use v3 (v2 deprecated), resolved SARIF processing issues
+# 1.1.21 - FEATURE: Added support for MODEL_PATH and SOURCE_VIDEO_DIR env vars. SOURCE_VIDEO_DIR now accepts both files and directories

@@ -29,8 +29,8 @@ logger = logging.getLogger(__name__)
 """
 CONSTANTS AND CONFIGURATION
 """
-MODEL_PATH = "static/vosk-model-en-us-0.22"
-SOURCE_VIDEO_DIR = "static"
+MODEL_PATH = os.getenv('MODEL_PATH', "static/vosk-model-en-us-0.22")
+SOURCE_VIDEO_DIR = os.getenv('SOURCE_VIDEO_DIR', "static")
 WAV_FILE = "output.wav"
 FAST_WAV_FILE = "output_fast.wav"
 MP3_FILE = "output.mp3"
@@ -42,45 +42,62 @@ OUTPUT_VIDEO = "final.mp4"
 FUNCTIONS
 """
 
-def get_random_video(directory=SOURCE_VIDEO_DIR):
+def get_source_video(source_path=SOURCE_VIDEO_DIR):
     """
-    Selects a random video file from the specified directory.
-    Filters out small files (likely corrupted or output files) and ensures only large source videos are selected.
+    Gets a video file based on the source path.
+    If source_path is a file, returns that file.
+    If source_path is a directory, selects a random video from it.
+    Filters out small files (likely corrupted or output files) when selecting from directory.
 
     Args:
-        directory (str): Directory path to look for .mp4 files.
+        source_path (str): Path to a video file or directory containing video files.
     
     Returns:
-        str or dict: Path to the randomly chosen video or an error message.
+        str or dict: Path to the video file or an error message.
     """
     try:
-        if not os.path.isdir(directory):
-            return {"error": f"Directory not found: {directory}"}
+        # Check if source_path is a file
+        if os.path.isfile(source_path):
+            if source_path.lower().endswith('.mp4'):
+                # Verify file size
+                file_size = os.path.getsize(source_path)
+                if file_size > 50 * 1024 * 1024:  # 50MB minimum
+                    logger.info(f"Using specified video file: {source_path}")
+                    return source_path
+                else:
+                    return {"error": f"Video file too small ({file_size} bytes), expected > 50MB: {source_path}"}
+            else:
+                return {"error": f"Invalid video file format (expected .mp4): {source_path}"}
         
-        video_files = []
-        for f in os.listdir(directory):
-            if f.lower().endswith('.mp4'):
-                full_path = os.path.join(directory, f)
-                try:
-                    # Only include files larger than 50MB (source videos should be large)
-                    file_size = os.path.getsize(full_path)
-                    if file_size > 50 * 1024 * 1024:  # 50MB minimum
-                        video_files.append(full_path)
-                    else:
-                        logger.warning(f"Skipping small video file: {f} ({file_size} bytes)")
-                except OSError:
-                    logger.warning(f"Could not get size for: {f}")
-                    continue
-        
-        if not video_files:
-            return {"error": f"No valid large video files found in directory \"{directory}\""}
+        # Check if source_path is a directory
+        elif os.path.isdir(source_path):
+            video_files = []
+            for f in os.listdir(source_path):
+                if f.lower().endswith('.mp4'):
+                    full_path = os.path.join(source_path, f)
+                    try:
+                        # Only include files larger than 50MB (source videos should be large)
+                        file_size = os.path.getsize(full_path)
+                        if file_size > 50 * 1024 * 1024:  # 50MB minimum
+                            video_files.append(full_path)
+                        else:
+                            logger.warning(f"Skipping small video file: {f} ({file_size} bytes)")
+                    except OSError:
+                        logger.warning(f"Could not get size for: {f}")
+                        continue
+            
+            if not video_files:
+                return {"error": f"No valid large video files found in directory \"{source_path}\""}
 
-        selected_video = random.choice(video_files)
-        logger.info(f"Selected video: {selected_video} ({os.path.getsize(selected_video)} bytes)")
-        return selected_video
+            selected_video = random.choice(video_files)
+            logger.info(f"Randomly selected video from directory: {selected_video}")
+            return selected_video
+        
+        else:
+            return {"error": f"Source path not found: {source_path}"}
         
     except Exception as e:
-        logger.error(f"Error in get_random_video: {str(e)}")
+        logger.error(f"Error in get_source_video: {str(e)}")
         logger.debug(traceback.format_exc())
         return {"error": f"Unexpected error: {str(e)}"}
 
@@ -291,7 +308,7 @@ def script(input_text, customspeed, customvoice, final_path="final.mp4", progres
 
         # Get background video
         update_progress(10, "setup", "Selecting background video...")
-        source_video = get_random_video()
+        source_video = get_source_video()
         if isinstance(source_video, dict) and "error" in source_video:
             return source_video
 

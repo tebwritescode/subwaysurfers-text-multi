@@ -47,3 +47,6 @@ server.log
 # Temporary files
 *.tmp
 *.temp
+
+# Claude Code specific
+CLAUDE.md
