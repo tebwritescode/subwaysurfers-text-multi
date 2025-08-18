@@ -1,5 +1,5 @@
 # Use official Python image as the base
-FROM python:3.13-slim
+FROM python:3.12-slim
 
 # Set the working directory inside the container
 WORKDIR /app
@@ -25,8 +25,8 @@ ENV DOCKER_ENV=true
 COPY . /app
 
 # Upgrade pip and install Python dependencies
-RUN pip install --upgrade pip --break-system-packages
-RUN pip install -r requirements-docker.txt --break-system-packages
+RUN pip install --upgrade pip --break-system-packages --root-user-action=ignore
+RUN pip install -r requirements-docker.txt --break-system-packages --root-user-action=ignore
 
 # Create directories for generated videos and ensure proper permissions
 RUN mkdir -p /app/final_videos && \
