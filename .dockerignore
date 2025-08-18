@@ -1,0 +1,61 @@
+# Version control
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+*.so
+.Python
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# System files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Video files - will be mounted as volumes
+static/*.mp4
+static/*.avi
+static/*.mov
+
+# Vosk models - will be mounted as volumes  
+static/vosk-model-*
+static/vosk-*
+
+# Output directories
+final_videos/
+output*
+final.mp4
+
+# Logs
+*.log
+server.log
+
+# Documentation
+*.md
+README*
+
+# Temporary files
+*.tmp
+*.temp
+
+# Tests (if any)
+tests/
+test_*

@@ -1,9 +1,48 @@
 __pycache__
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+*.so
+
+# Output files
 output*
-static/surf.mp4
-.DS_Store
-static/.DS_Store
 final.mp4
-static/vosk-model-en-us-0.22
 final_videos/*
-.venv
+
+# System files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Video files (too large for git/docker)
+static/*.mp4
+static/*.avi
+static/*.mov
+
+# Vosk model (too large for git/docker)
+static/vosk-model-*
+static/vosk-*
+
+# Logs
+*.log
+server.log
+
+# Temporary files
+*.tmp
+*.temp
