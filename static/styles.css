@@ -9,7 +9,14 @@
     --text-color: #ffffff;
     --surface-color: rgba(26, 26, 26, 0.8);
     --bark-color: #e67e22;
+    --bark-light: #f39c12;
     --tiktok-color: #ff0050;
+    --warning-color: #f1c40f;
+    --success-color: #27ae60;
+    --loading-bg: rgba(0, 0, 0, 0.9);
+    --status-ready: #2ecc71;
+    --status-loading: #f39c12;
+    --status-error: #e74c3c;
 }
 
 body {
@@ -151,6 +158,20 @@ textarea:focus, select:focus {
     font-weight: 500;
 }
 
+.bark-performance-note {
+    margin-top: 0.5em;
+    padding: 0.5em;
+    background: rgba(241, 196, 15, 0.1);
+    border-left: 3px solid var(--warning-color);
+    border-radius: 0 6px 6px 0;
+}
+
+.bark-performance-note small {
+    color: var(--warning-color);
+    display: block;
+    font-size: 0.8em;
+}
+
 /* Progress Bar */
 .progress-container {
     margin: 2em auto;
@@ -179,10 +200,44 @@ textarea:focus, select:focus {
 
 .progress-step.active {
     color: var(--primary-color);
+    position: relative;
+}
+
+.progress-step.active::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 30px;
+    height: 2px;
+    background: var(--primary-color);
+    border-radius: 1px;
+    animation: step-glow 1.5s infinite;
+}
+
+@keyframes step-glow {
+    0%, 100% { opacity: 1; box-shadow: 0 0 5px var(--primary-color); }
+    50% { opacity: 0.6; box-shadow: 0 0 10px var(--primary-color); }
 }
 
 .progress-step.done {
     color: var(--accent-color);
+    position: relative;
+}
+
+.progress-step.done::before {
+    content: '✓';
+    position: absolute;
+    left: -20px;
+    color: var(--accent-color);
+    font-weight: bold;
+    animation: check-appear 0.3s ease-out;
+}
+
+@keyframes check-appear {
+    0% { opacity: 0; transform: scale(0); }
+    100% { opacity: 1; transform: scale(1); }
 }
 
 .progress-bar-bg {
@@ -212,6 +267,70 @@ textarea:focus, select:focus {
     z-index: 2;
     pointer-events: none;
     white-space: nowrap;
+}
+
+/* TTS System Status Indicator */
+.tts-system-status {
+    margin-top: 1.5em;
+    text-align: center;
+}
+
+.tts-status-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5em;
+    background: var(--surface-color);
+    padding: 0.8em 1.5em;
+    border-radius: 20px;
+    border: 2px solid var(--primary-color);
+    font-size: 0.9em;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.tts-status-icon {
+    font-size: 1.2em;
+    animation: pulse-soft 2s infinite;
+}
+
+@keyframes pulse-soft {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+/* Model Status in Voice Selection */
+.tts-model-status {
+    margin-top: 0.5em;
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    font-size: 0.85em;
+}
+
+.model-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--status-ready);
+    animation: status-pulse 2s infinite;
+}
+
+.model-status-dot.bark-voice {
+    background: var(--bark-color);
+}
+
+.model-status-dot.standard-voice {
+    background: var(--status-ready);
+}
+
+@keyframes status-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(1.2); }
+}
+
+.model-status-text {
+    color: var(--text-color);
+    opacity: 0.9;
 }
 
 /* Tables */
@@ -375,5 +494,254 @@ table a:hover, .delete-btn:hover {
     color: var(--text-color);
     font-size: 1.5em;
 }
+
+/* Bark TTS Model Loading Overlay */
+.bark-model-loading {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--loading-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(5px);
+}
+
+.bark-loading-content {
+    background: var(--surface-color);
+    padding: 3em 2em;
+    border-radius: 20px;
+    text-align: center;
+    max-width: 500px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    border: 2px solid var(--bark-color);
+}
+
+.bark-loading-icon {
+    position: relative;
+    margin-bottom: 2em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.bark-spinner {
+    width: 60px;
+    height: 60px;
+    border: 4px solid rgba(243, 156, 18, 0.2);
+    border-top: 4px solid var(--bark-color);
+    border-radius: 50%;
+    animation: bark-spin 1s linear infinite;
+}
+
+@keyframes bark-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.bark-emoji {
+    position: absolute;
+    font-size: 2em;
+    animation: bark-float 2s ease-in-out infinite;
+}
+
+@keyframes bark-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+}
+
+.bark-loading-text h3 {
+    color: var(--bark-color);
+    margin: 0 0 1em 0;
+    font-size: 1.4em;
+}
+
+.bark-loading-text p {
+    color: var(--text-color);
+    margin: 0 0 1.5em 0;
+    opacity: 0.9;
+}
+
+.bark-loading-progress {
+    background: rgba(255, 255, 255, 0.1);
+    height: 8px;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 1em;
+}
+
+.bark-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--bark-color), var(--bark-light));
+    border-radius: 4px;
+    width: 0%;
+    transition: width 0.3s ease;
+    animation: bark-shimmer 2s infinite;
+}
+
+@keyframes bark-shimmer {
+    0% { background-position: -200px 0; }
+    100% { background-position: 200px 0; }
+}
+
+.bark-loading-details {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.85em;
+}
+
+/* Bark Status Messages */
+.bark-status-container {
+    margin: 2em auto;
+    background: var(--surface-color);
+    border-radius: 16px;
+    padding: 1.5em;
+    border: 2px solid var(--bark-color);
+    max-width: 600px;
+}
+
+.bark-status-item {
+    display: flex;
+    align-items: center;
+    gap: 1em;
+    padding: 1em;
+    border-radius: 12px;
+    margin-bottom: 1em;
+    background: rgba(230, 126, 34, 0.1);
+    border-left: 4px solid transparent;
+    opacity: 0.5;
+    transition: all 0.3s ease;
+}
+
+.bark-status-item:last-child {
+    margin-bottom: 0;
+}
+
+.bark-status-item.active {
+    opacity: 1;
+    background: rgba(230, 126, 34, 0.2);
+    border-left-color: var(--bark-color);
+    transform: scale(1.02);
+}
+
+.bark-status-icon {
     font-size: 1.5em;
+    min-width: 40px;
+    text-align: center;
+}
+
+.bark-status-icon.bark-loading {
+    animation: bark-bounce 1s infinite;
+}
+
+@keyframes bark-bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+}
+
+.bark-status-content {
+    flex: 1;
+}
+
+.bark-status-content strong {
+    display: block;
+    color: var(--bark-color);
+    margin-bottom: 0.3em;
+    font-size: 1.1em;
+}
+
+.bark-status-content p {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.9em;
+}
+
+.bark-mini-progress {
+    margin-top: 0.5em;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.bark-mini-bar {
+    height: 100%;
+    background: var(--bark-color);
+    border-radius: 2px;
+    width: 0%;
+    animation: bark-mini-progress 2s ease-in-out infinite;
+}
+
+@keyframes bark-mini-progress {
+    0% { width: 0%; }
+    50% { width: 70%; }
+    100% { width: 100%; }
+}
+
+/* Enhanced Progress Bar Animations */
+.progress-bar {
+    width: 0;
+    background: linear-gradient(90deg, var(--primary-color), var(--primary-dark));
+    border-radius: 12px;
+    transition: width 0.4s ease;
+    position: relative;
+    height: 100%;
+    overflow: hidden;
+}
+
+.progress-bar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+        45deg,
+        rgba(255,255,255,.15) 25%,
+        transparent 25%,
+        transparent 50%,
+        rgba(255,255,255,.15) 50%,
+        rgba(255,255,255,.15) 75%,
+        transparent 75%,
+        transparent
+    );
+    background-size: 30px 30px;
+    animation: progress-stripe 1s linear infinite;
+}
+
+@keyframes progress-stripe {
+    0% { background-position: 0 0; }
+    100% { background-position: 30px 0; }
+}
+
+/* Responsive Design for Progress Indicators */
+@media (max-width: 768px) {
+    .bark-loading-content {
+        margin: 1em;
+        padding: 2em 1.5em;
+    }
+
+    .bark-status-container {
+        margin: 1em;
+        padding: 1em;
+    }
+
+    .bark-status-item {
+        flex-direction: column;
+        text-align: center;
+        gap: 0.5em;
+    }
+
+    .progress-steps {
+        flex-direction: column;
+        gap: 0.5em;
+        margin-bottom: 1em;
+    }
+
+    .progress-step {
+        font-size: 0.9em;
+    }
 }

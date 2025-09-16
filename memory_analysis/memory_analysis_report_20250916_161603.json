@@ -1,0 +1,208 @@
+{
+  "baseline": {
+    "summary": {
+      "baseline_mb": 38.0,
+      "peak_mb": 206.765625,
+      "current_mb": 206.765625,
+      "average_mb": 164.146875,
+      "median_mb": 192.609375,
+      "std_mb": 63.34168919316685,
+      "growth_from_baseline_mb": 168.765625,
+      "total_measurements": 5,
+      "phases_tested": [
+        "baseline",
+        "basic_imports"
+      ]
+    },
+    "phase_analysis": {
+      "baseline": {
+        "count": 2,
+        "avg_mb": 114.03125,
+        "peak_mb": 190.0625,
+        "min_mb": 38.0,
+        "std_mb": 76.03125
+      },
+      "basic_imports": {
+        "count": 3,
+        "avg_mb": 197.55729166666666,
+        "peak_mb": 206.765625,
+        "min_mb": 192.609375,
+        "std_mb": 6.517321338598824
+      }
+    },
+    "gpu_analysis": null,
+    "measurement_count": 5,
+    "analysis_timestamp": "2025-09-16T16:16:01.413827"
+  },
+  "mock_server": {
+    "summary": {
+      "baseline_mb": 206.890625,
+      "peak_mb": 207.484375,
+      "current_mb": 207.484375,
+      "average_mb": 207.40808823529412,
+      "median_mb": 207.46875,
+      "std_mb": 0.189092680574595,
+      "growth_from_baseline_mb": 0.59375,
+      "total_measurements": 17,
+      "phases_tested": [
+        "mock_generation_1",
+        "mock_generation_3",
+        "mock_generation_0",
+        "mock_generation_2",
+        "mock_generation_4",
+        "mock_server"
+      ]
+    },
+    "phase_analysis": {
+      "mock_generation_1": {
+        "count": 3,
+        "avg_mb": 207.46875,
+        "peak_mb": 207.46875,
+        "min_mb": 207.46875,
+        "std_mb": 0.0
+      },
+      "mock_generation_3": {
+        "count": 3,
+        "avg_mb": 207.484375,
+        "peak_mb": 207.484375,
+        "min_mb": 207.484375,
+        "std_mb": 0.0
+      },
+      "mock_generation_0": {
+        "count": 3,
+        "avg_mb": 207.46875,
+        "peak_mb": 207.46875,
+        "min_mb": 207.46875,
+        "std_mb": 0.0
+      },
+      "mock_generation_2": {
+        "count": 3,
+        "avg_mb": 207.47916666666666,
+        "peak_mb": 207.484375,
+        "min_mb": 207.46875,
+        "std_mb": 0.00736569563735987
+      },
+      "mock_generation_4": {
+        "count": 3,
+        "avg_mb": 207.484375,
+        "peak_mb": 207.484375,
+        "min_mb": 207.484375,
+        "std_mb": 0.0
+      },
+      "mock_server": {
+        "count": 2,
+        "avg_mb": 206.890625,
+        "peak_mb": 206.890625,
+        "min_mb": 206.890625,
+        "std_mb": 0.0
+      }
+    },
+    "gpu_analysis": null,
+    "measurement_count": 17,
+    "analysis_timestamp": "2025-09-16T16:16:01.762226"
+  },
+  "bark_estimates": {
+    "suno/bark": {
+      "model_size_mb": 5222.4,
+      "loading_overhead_mb": 1566.7199999999998,
+      "inference_overhead_mb": 1044.48,
+      "estimated_gpu_usage_mb": 6266.879999999999,
+      "estimated_cpu_usage_mb": 8878.079999999998,
+      "recommended_system_ram_gb": 13.004999999999997,
+      "recommended_gpu_ram_gb": 7.9559999999999995,
+      "components": {
+        "text_encoder": 0.5,
+        "coarse_acoustics": 1.8,
+        "fine_acoustics": 2.3,
+        "codec": 0.5
+      }
+    },
+    "suno/bark-small": {
+      "model_size_mb": 2867.2,
+      "loading_overhead_mb": 860.16,
+      "inference_overhead_mb": 573.4399999999999,
+      "estimated_gpu_usage_mb": 3440.64,
+      "estimated_cpu_usage_mb": 4874.24,
+      "recommended_system_ram_gb": 8,
+      "recommended_gpu_ram_gb": 6,
+      "components": {
+        "text_encoder": 0.3,
+        "coarse_acoustics": 1.0,
+        "fine_acoustics": 1.2,
+        "codec": 0.3
+      }
+    }
+  },
+  "pytorch_server": {
+    "summary": {
+      "baseline_mb": 207.5,
+      "peak_mb": 211.609375,
+      "current_mb": 211.609375,
+      "average_mb": 209.078125,
+      "median_mb": 208.96875,
+      "std_mb": 1.1706822633855676,
+      "growth_from_baseline_mb": 4.109375,
+      "total_measurements": 9,
+      "phases_tested": [
+        "synthesis_request_1",
+        "synthesis_request_2",
+        "pytorch_server_test",
+        "synthesis_request_0"
+      ]
+    },
+    "phase_analysis": {
+      "synthesis_request_1": {
+        "count": 2,
+        "avg_mb": 209.1796875,
+        "peak_mb": 209.390625,
+        "min_mb": 208.96875,
+        "std_mb": 0.2109375
+      },
+      "synthesis_request_2": {
+        "count": 2,
+        "avg_mb": 210.78125,
+        "peak_mb": 211.609375,
+        "min_mb": 209.953125,
+        "std_mb": 0.828125
+      },
+      "pytorch_server_test": {
+        "count": 3,
+        "avg_mb": 207.96875,
+        "peak_mb": 208.90625,
+        "min_mb": 207.5,
+        "std_mb": 0.6629126073623883
+      },
+      "synthesis_request_0": {
+        "count": 2,
+        "avg_mb": 208.9375,
+        "peak_mb": 208.96875,
+        "min_mb": 208.90625,
+        "std_mb": 0.03125
+      }
+    },
+    "gpu_analysis": null,
+    "measurement_count": 9,
+    "analysis_timestamp": "2025-09-16T16:16:03.639117"
+  },
+  "analysis": {
+    "memory_efficiency": {
+      "baseline_overhead_mb": 207.5,
+      "peak_usage_mb": 211.609375,
+      "memory_growth_mb": 4.109375,
+      "efficiency_ratio": 1.9419626375249206,
+      "memory_stability": 0.5599257518621652
+    },
+    "optimization_opportunities": [],
+    "deployment_recommendations": {
+      "minimum_ram_gb": 4,
+      "recommended_ram_gb": 8,
+      "docker_memory_limit_mb": 275,
+      "scaling_strategy": "horizontal"
+    },
+    "scaling_analysis": {
+      "memory_per_request_mb": 209.6328125,
+      "estimated_concurrent_requests": 39,
+      "memory_scaling_pattern": "variable"
+    }
+  }
+}

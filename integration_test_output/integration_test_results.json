@@ -1,0 +1,120 @@
+{
+  "total_tests": 13,
+  "passed_tests": 10,
+  "failed_tests": 3,
+  "success_rate": 76.92307692307693,
+  "total_duration": 18.9370858669281,
+  "tests": {
+    "voice_availability": {
+      "passed": true,
+      "message": "All 15 voices available",
+      "duration": 0,
+      "timestamp": "2025-09-16T16:43:03.442521"
+    },
+    "voice_synthesis_narrator": {
+      "passed": true,
+      "message": "Generated in 0.5s",
+      "duration": 0.5180950164794922,
+      "timestamp": "2025-09-16T16:43:03.961430"
+    },
+    "voice_synthesis_announcer": {
+      "passed": true,
+      "message": "Generated in 0.5s",
+      "duration": 0.5192341804504395,
+      "timestamp": "2025-09-16T16:43:04.481268"
+    },
+    "voice_synthesis_excited": {
+      "passed": true,
+      "message": "Generated in 0.5s",
+      "duration": 0.5167031288146973,
+      "timestamp": "2025-09-16T16:43:04.998612"
+    },
+    "voice_synthesis_calm": {
+      "passed": true,
+      "message": "Generated in 0.5s",
+      "duration": 0.525244951248169,
+      "timestamp": "2025-09-16T16:43:05.524709"
+    },
+    "voice_synthesis_deep": {
+      "passed": true,
+      "message": "Generated in 0.5s",
+      "duration": 0.5240600109100342,
+      "timestamp": "2025-09-16T16:43:06.049471"
+    },
+    "voice_synthesis_overall": {
+      "passed": true,
+      "message": "5/5 voices successful",
+      "duration": 0,
+      "timestamp": "2025-09-16T16:43:06.049480"
+    },
+    "batch_voice_test": {
+      "passed": true,
+      "message": "5/5 voices successful",
+      "duration": 0,
+      "timestamp": "2025-09-16T16:43:06.090092"
+    },
+    "audio_generation_bark": {
+      "passed": true,
+      "message": "Generated in 0.5s",
+      "duration": 0.5242578983306885,
+      "timestamp": "2025-09-16T16:43:06.619396"
+    },
+    "video_generation_bark": {
+      "passed": false,
+      "message": "Whisper server not available",
+      "duration": 0,
+      "timestamp": "2025-09-16T16:43:06.735838"
+    },
+    "fallback_tiktok": {
+      "passed": false,
+      "message": "Fallback failed",
+      "duration": 0,
+      "timestamp": "2025-09-16T16:43:10.606879"
+    },
+    "memory_management": {
+      "passed": true,
+      "message": "Memory increase: 151.7MB",
+      "duration": 0,
+      "timestamp": "2025-09-16T16:43:20.838735"
+    },
+    "error_handling": {
+      "passed": false,
+      "message": "2/3 error cases handled",
+      "duration": 0,
+      "timestamp": "2025-09-16T16:43:22.373464"
+    }
+  },
+  "metrics": {
+    "server_startup_time": 0,
+    "voice_synthesis_times": {
+      "narrator": 0.5180950164794922,
+      "announcer": 0.5192341804504395,
+      "excited": 0.5167031288146973,
+      "calm": 0.525244951248169,
+      "deep": 0.5240600109100342
+    },
+    "video_generation_time": 0,
+    "memory_usage": {
+      "before_tests": {
+        "used_mb": 18216.71875,
+        "available_mb": 15694.0625,
+        "percent": 57.4
+      },
+      "after_tests": {
+        "used_mb": 18368.4375,
+        "available_mb": 15532.96875,
+        "percent": 57.9
+      },
+      "increase_mb": 151.71875,
+      "final": {
+        "used_mb": 18269.484375,
+        "available_mb": 15634.59375,
+        "percent": 57.6
+      }
+    },
+    "fallback_tests": {},
+    "audio_generation_time": {
+      "bark_tts": 0.5242578983306885
+    }
+  }
+}

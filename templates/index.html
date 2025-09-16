@@ -12,6 +12,27 @@
         <a href="{{ url_for('home') }}">Generate</a>
         <a href="{{ url_for('videos') }}">Browse</a>
     </div>
+    <!-- Bark TTS Model Loading Indicator -->
+    <div class="bark-model-loading" id="bark-model-loading" style="display: none;">
+        <div class="bark-loading-content">
+            <div class="bark-loading-icon">
+                <div class="bark-spinner"></div>
+                <span class="bark-emoji">🎭</span>
+            </div>
+            <div class="bark-loading-text">
+                <h3>Initializing Bark TTS Model</h3>
+                <p id="bark-loading-message">Loading neural network components...</p>
+                <div class="bark-loading-progress">
+                    <div class="bark-progress-bar" id="bark-progress-bar"></div>
+                </div>
+                <div class="bark-loading-details">
+                    <small id="bark-loading-details">This may take 30-60 seconds on first use</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Progress Container -->
     <div class="progress-container" id="progress-container">
         <div class="progress-steps">
             <div class="progress-step" id="step-extract">Extracting Text</div>
@@ -21,6 +42,12 @@
         <div class="progress-bar-bg">
             <div class="progress-bar" id="progress-bar"></div>
             <span id="progress-status" class="progress-status">Preparing...</span>
+        </div>
+        <div class="tts-system-status" id="tts-system-status">
+            <div class="tts-status-indicator" id="tts-status-indicator">
+                <span class="tts-status-icon">🔊</span>
+                <span class="tts-status-text">{{ tts_system }} Ready</span>
+            </div>
         </div>
     </div>
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -36,13 +63,18 @@
         <textarea id="text_input" name="text_input" placeholder="Enter Article Link or Text"></textarea>
         
         <div class="voice-selection">
-            <label for="voice">Select Voice: 
+            <label for="voice">Select Voice:
                 <span class="tts-system-indicator">({{ tts_system }})</span>
+                <div class="tts-model-status" id="tts-model-status">
+                    <span class="model-status-dot" id="model-status-dot"></span>
+                    <span class="model-status-text" id="model-status-text">Model Ready</span>
+                </div>
             </label>
             <select id="voice" name="voice">
                 {% for voice in voices %}
-                <option value="{{ voice.value }}" 
+                <option value="{{ voice.value }}"
                         title="{{ voice.description }}"
+                        data-type="{{ voice.get('type', 'standard') }}"
                         {% if loop.first %}selected{% endif %}>
                     {{ voice.name }}
                     {% if voice.get('type') == 'bark' %}🎭{% endif %}
@@ -52,6 +84,9 @@
             {% if use_pytorch_tts %}
             <div class="voice-info">
                 <small>🎭 Bark voices support emotions and natural speech patterns</small>
+                <div class="bark-performance-note">
+                    <small>⚠️ First-time model loading may take 30-60 seconds</small>
+                </div>
             </div>
             {% endif %}
         </div>
@@ -63,6 +98,32 @@
 
         <div id="loading-message" class="flash-message success" style="display: none;">
             Creating video... Please wait.
+        </div>
+
+        <!-- Bark TTS Status Messages -->
+        <div id="bark-status-messages" class="bark-status-container" style="display: none;">
+            <div class="bark-status-item" id="bark-model-init">
+                <div class="bark-status-icon bark-loading">🎭</div>
+                <div class="bark-status-content">
+                    <strong>Initializing Bark TTS</strong>
+                    <p>Loading neural voice model components...</p>
+                    <div class="bark-mini-progress"><div class="bark-mini-bar"></div></div>
+                </div>
+            </div>
+            <div class="bark-status-item" id="bark-voice-load">
+                <div class="bark-status-icon">🗣️</div>
+                <div class="bark-status-content">
+                    <strong>Loading Voice Profile</strong>
+                    <p>Preparing selected voice characteristics...</p>
+                </div>
+            </div>
+            <div class="bark-status-item" id="bark-synthesis">
+                <div class="bark-status-icon">🎵</div>
+                <div class="bark-status-content">
+                    <strong>Synthesizing Speech</strong>
+                    <p>Generating natural audio with emotional expression...</p>
+                </div>
+            </div>
         </div>
         
         <button type="submit" id="submit-btn">Submit</button>
@@ -82,9 +143,92 @@
             {id: "step-merge", label: "Merging Video & Audio"}
         ];
 
+        // Bark TTS specific elements
+        const barkModelLoading = document.getElementById('bark-model-loading');
+        const barkLoadingMessage = document.getElementById('bark-loading-message');
+        const barkProgressBar = document.getElementById('bark-progress-bar');
+        const barkLoadingDetails = document.getElementById('bark-loading-details');
+        const barkStatusMessages = document.getElementById('bark-status-messages');
+        const voiceSelect = document.getElementById('voice');
+        const modelStatusDot = document.getElementById('model-status-dot');
+        const modelStatusText = document.getElementById('model-status-text');
+        const ttsStatusIndicator = document.getElementById('tts-status-indicator');
+
+        // Bark TTS model status tracking
+        let barkModelReady = false;
+        let currentVoiceType = 'standard';
+
         speedSlider.addEventListener('input', function() {
             speedValue.textContent = this.value;
         });
+
+        // Voice selection change handler
+        voiceSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            const voiceType = selectedOption.getAttribute('data-type') || 'standard';
+            currentVoiceType = voiceType;
+
+            updateModelStatus(voiceType);
+
+            // If switching to Bark voice and model not ready, show preparation
+            if (voiceType === 'bark' && !barkModelReady) {
+                showBarkModelPreparation();
+            }
+        });
+
+        function updateModelStatus(voiceType) {
+            if (voiceType === 'bark') {
+                modelStatusDot.className = 'model-status-dot bark-voice';
+                modelStatusText.textContent = barkModelReady ? 'Bark Model Ready' : 'Bark Model Loading...';
+                ttsStatusIndicator.innerHTML = '<span class="tts-status-icon">🎭</span><span class="tts-status-text">Bark TTS Active</span>';
+            } else {
+                modelStatusDot.className = 'model-status-dot standard-voice';
+                modelStatusText.textContent = 'Standard TTS Ready';
+                ttsStatusIndicator.innerHTML = '<span class="tts-status-icon">🔊</span><span class="tts-status-text">Standard TTS Active</span>';
+            }
+        }
+
+        function showBarkModelPreparation() {
+            const messages = [
+                'Initializing Bark neural network...',
+                'Loading language model components...',
+                'Preparing voice synthesis engine...',
+                'Optimizing for selected voice...',
+                'Model ready for synthesis!'
+            ];
+
+            let messageIndex = 0;
+            let progress = 0;
+
+            const updateInterval = setInterval(() => {
+                if (messageIndex < messages.length - 1) {
+                    barkLoadingMessage.textContent = messages[messageIndex];
+                    progress += 20;
+                    barkProgressBar.style.width = progress + '%';
+                    messageIndex++;
+                } else {
+                    barkLoadingMessage.textContent = messages[messageIndex];
+                    barkProgressBar.style.width = '100%';
+                    barkModelReady = true;
+                    updateModelStatus('bark');
+                    clearInterval(updateInterval);
+
+                    setTimeout(() => {
+                        barkModelLoading.style.display = 'none';
+                    }, 1000);
+                }
+            }, 800);
+        }
+
+        function showBarkStatusStep(stepId) {
+            const statusItems = barkStatusMessages.querySelectorAll('.bark-status-item');
+            statusItems.forEach(item => item.classList.remove('active'));
+
+            const currentStep = document.getElementById(stepId);
+            if (currentStep) {
+                currentStep.classList.add('active');
+            }
+        }
 
         function setStepActive(stepIdx) {
             steps.forEach((step, idx) => {
@@ -98,50 +242,95 @@
         document.getElementById('textform').addEventListener('submit', function() {
             loadingMessage.style.display = "block";
             submitButton.disabled = true;
+
+            // Show Bark-specific status if using Bark TTS
+            if (currentVoiceType === 'bark') {
+                barkStatusMessages.style.display = "block";
+                showBarkStatusStep('bark-model-init');
+
+                // Show Bark model loading if not ready
+                if (!barkModelReady) {
+                    barkModelLoading.style.display = "flex";
+                    showBarkModelPreparation();
+                }
+            }
+
             progressContainer.style.display = "flex";
             progressBar.style.width = "0%";
             setStepActive(0);
             progressStatus.textContent = "Extracting text from input...";
+
             let progress = 0;
             let step = 0;
             let stepProgress = [0, 0, 0];
+
             let interval = setInterval(() => {
                 if (step === 0) {
                     progress += Math.random() * 10 + 10;
                     if (progress >= 33) {
                         progress = 33;
                         setStepActive(1);
-                        progressStatus.textContent = "Generating audio...";
+
+                        // Update progress text based on TTS system
+                        if (currentVoiceType === 'bark') {
+                            progressStatus.textContent = "Initializing Bark TTS model...";
+                            showBarkStatusStep('bark-voice-load');
+                        } else {
+                            progressStatus.textContent = "Generating audio...";
+                        }
                         step = 1;
                     }
                 } else if (step === 1) {
-                    progress += Math.random() * 10 + 10;
+                    progress += Math.random() * 8 + 7; // Slower for Bark processing
                     if (progress >= 66) {
                         progress = 66;
                         setStepActive(2);
-                        progressStatus.textContent = "Merging video and audio...";
+
+                        if (currentVoiceType === 'bark') {
+                            progressStatus.textContent = "Synthesizing natural speech...";
+                            showBarkStatusStep('bark-synthesis');
+                        } else {
+                            progressStatus.textContent = "Merging video and audio...";
+                        }
                         step = 2;
                     }
                 } else if (step === 2) {
                     progress += Math.random() * 7 + 5;
                     if (progress >= 90) {
                         progress = 90;
-                        progressStatus.textContent = "Finalizing...";
+                        progressStatus.textContent = "Finalizing video...";
                         clearInterval(interval);
                     }
                 }
                 progressBar.style.width = progress + "%";
-            }, 600);
+            }, currentVoiceType === 'bark' ? 800 : 600); // Slower updates for Bark
+
             window.fakeProgressInterval = interval;
         });
 
         window.onload = function() {
+            // Initialize voice type from current selection
+            const selectedOption = voiceSelect.options[voiceSelect.selectedIndex];
+            currentVoiceType = selectedOption.getAttribute('data-type') || 'standard';
+            updateModelStatus(currentVoiceType);
+
+            // Handle error states
             const errorMessages = document.querySelectorAll('.flash-message.error');
             if (errorMessages.length > 0) {
                 submitButton.disabled = false;
                 loadingMessage.style.display = "none";
                 progressContainer.style.display = "none";
+                barkModelLoading.style.display = "none";
+                barkStatusMessages.style.display = "none";
                 if (window.fakeProgressInterval) clearInterval(window.fakeProgressInterval);
+            }
+
+            // Simulate checking Bark model status on page load
+            if (currentVoiceType === 'bark') {
+                setTimeout(() => {
+                    barkModelReady = true;
+                    updateModelStatus('bark');
+                }, 1000);
             }
         };
     </script>

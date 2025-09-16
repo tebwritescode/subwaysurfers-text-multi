@@ -1,0 +1,47 @@
+# Docker Compose Override for Development
+# This file automatically overrides settings in docker-compose.yml
+# Use this for local development with mock services
+
+version: '3.8'
+
+services:
+  # Override main app for development
+  subway-surfers-app:
+    environment:
+      # Use mock TTS for faster development
+      - USE_MOCK_TTS=true
+      - DEBUG=true
+      - LOG_LEVEL=debug
+    volumes:
+      # Mount source code for hot reloading
+      - .:/app
+    command: ["python", "app.py", "--debug"]
+
+  # Override PyTorch TTS for mock/development mode
+  pytorch-tts:
+    environment:
+      # Enable mock mode for development (200MB RAM usage)
+      - USE_MOCK=true
+      - LOG_LEVEL=debug
+      - PRELOAD_MODELS=  # Don't preload in dev
+    command: ["python", "app_mock.py"]  # Use mock server
+    deploy:
+      resources:
+        limits:
+          memory: 512M  # Much lower for mock
+          cpus: '1.0'
+        reservations:
+          memory: 256M
+          cpus: '0.5'
+    healthcheck:
+      start_period: 10s  # Faster startup for mock
+
+  # Disable unnecessary services in development
+  alltalk-tts:
+    profiles: ["production"]  # Only run in production
+
+  # Optional: Use smaller Whisper model for development
+  whisper-asr:
+    environment:
+      - PRELOAD_MODEL=tiny  # Fastest model for development
+      - LOG_LEVEL=debug

@@ -1,0 +1,173 @@
+[
+  {
+    "timestamp": 1758053761.778904,
+    "phase": "pytorch_server_test",
+    "process_memory": {
+      "rss": 217579520,
+      "vms": 446037164032,
+      "rss_mb": 207.5,
+      "vms_mb": 425374.1875,
+      "percent": 0.5628797743055556
+    },
+    "system_memory": {
+      "total_mb": 36864.0,
+      "available_mb": 15619.453125,
+      "used_mb": 18154.984375,
+      "percent": 57.6
+    },
+    "gpu_memory": null,
+    "label": "baseline"
+  },
+  {
+    "timestamp": 1758053761.7973719,
+    "phase": "pytorch_server_test",
+    "process_memory": {
+      "rss": 217579520,
+      "vms": 446037164032,
+      "rss_mb": 207.5,
+      "vms_mb": 425374.1875,
+      "percent": 0.5628797743055556
+    },
+    "system_memory": {
+      "total_mb": 36864.0,
+      "available_mb": 15619.453125,
+      "used_mb": 18154.984375,
+      "percent": 57.6
+    },
+    "gpu_memory": null,
+    "label": "before_server_test"
+  },
+  {
+    "timestamp": 1758053761.831593,
+    "phase": "pytorch_server_test",
+    "process_memory": {
+      "rss": 219054080,
+      "vms": 446156128256,
+      "rss_mb": 208.90625,
+      "vms_mb": 425487.640625,
+      "percent": 0.5666944715711806
+    },
+    "system_memory": {
+      "total_mb": 36864.0,
+      "available_mb": 15619.453125,
+      "used_mb": 18154.984375,
+      "percent": 57.6
+    },
+    "gpu_memory": null,
+    "label": "after_health_check"
+  },
+  {
+    "timestamp": 1758053761.849697,
+    "phase": "synthesis_request_0",
+    "process_memory": {
+      "rss": 219054080,
+      "vms": 446156128256,
+      "rss_mb": 208.90625,
+      "vms_mb": 425487.640625,
+      "percent": 0.5666944715711806
+    },
+    "system_memory": {
+      "total_mb": 36864.0,
+      "available_mb": 15619.453125,
+      "used_mb": 18154.984375,
+      "percent": 57.6
+    },
+    "gpu_memory": null,
+    "label": "before_request_0"
+  },
+  {
+    "timestamp": 1758053762.422529,
+    "phase": "synthesis_request_0",
+    "process_memory": {
+      "rss": 219119616,
+      "vms": 446156128256,
+      "rss_mb": 208.96875,
+      "vms_mb": 425487.640625,
+      "percent": 0.566864013671875
+    },
+    "system_memory": {
+      "total_mb": 36864.0,
+      "available_mb": 15546.40625,
+      "used_mb": 18222.609375,
+      "percent": 57.8
+    },
+    "gpu_memory": null,
+    "label": "after_request_0"
+  },
+  {
+    "timestamp": 1758053762.456293,
+    "phase": "synthesis_request_1",
+    "process_memory": {
+      "rss": 219119616,
+      "vms": 446156128256,
+      "rss_mb": 208.96875,
+      "vms_mb": 425487.640625,
+      "percent": 0.566864013671875
+    },
+    "system_memory": {
+      "total_mb": 36864.0,
+      "available_mb": 15548.015625,
+      "used_mb": 18222.453125,
+      "percent": 57.8
+    },
+    "gpu_memory": null,
+    "label": "before_request_1"
+  },
+  {
+    "timestamp": 1758053763.025154,
+    "phase": "synthesis_request_1",
+    "process_memory": {
+      "rss": 219561984,
+      "vms": 446156128256,
+      "rss_mb": 209.390625,
+      "vms_mb": 425487.640625,
+      "percent": 0.5680084228515625
+    },
+    "system_memory": {
+      "total_mb": 36864.0,
+      "available_mb": 15559.21875,
+      "used_mb": 18208.609375,
+      "percent": 57.8
+    },
+    "gpu_memory": null,
+    "label": "after_request_1"
+  },
+  {
+    "timestamp": 1758053763.0565472,
+    "phase": "synthesis_request_2",
+    "process_memory": {
+      "rss": 220151808,
+      "vms": 446156128256,
+      "rss_mb": 209.953125,
+      "vms_mb": 425487.640625,
+      "percent": 0.5695343017578125
+    },
+    "system_memory": {
+      "total_mb": 36864.0,
+      "available_mb": 15554.734375,
+      "used_mb": 18209.046875,
+      "percent": 57.8
+    },
+    "gpu_memory": null,
+    "label": "before_request_2"
+  },
+  {
+    "timestamp": 1758053763.636894,
+    "phase": "synthesis_request_2",
+    "process_memory": {
+      "rss": 221888512,
+      "vms": 446156128256,
+      "rss_mb": 211.609375,
+      "vms_mb": 425487.640625,
+      "percent": 0.5740271674262153
+    },
+    "system_memory": {
+      "total_mb": 36864.0,
+      "available_mb": 15599.1875,
+      "used_mb": 18163.75,
+      "percent": 57.7
+    },
+    "gpu_memory": null,
+    "label": "after_request_2"
+  }
+]
