@@ -19,7 +19,7 @@ Pillow>=10.0.0
 diffusers>=0.18.0
 # Voice processing
 phonemizer>=3.2.1
-espeak-ng
+# espeak-ng  # System dependency, install with: brew install espeak-ng
 # Optional: Coqui TTS for XTTS models
 TTS>=0.15.0
 # Audio processing
@@ -29,5 +29,5 @@ psutil>=5.9.0
 # Model caching
 huggingface-hub>=0.16.0
 # GPU support (will be ignored on CPU-only systems)
---extra-index-url https://download.pytorch.org/whl/cu118
-torch-audio>=2.0.0
+# --extra-index-url https://download.pytorch.org/whl/cu118
+# torch-audio>=2.0.0  # Already included as torchaudio above
