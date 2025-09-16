@@ -1,0 +1,82 @@
+# Prometheus configuration for memory monitoring
+# Bark TTS Memory Analysis
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  # - "rules/*.yml"
+
+scrape_configs:
+  # PyTorch TTS Servers
+  - job_name: 'pytorch-tts-mock'
+    static_configs:
+      - targets: ['pytorch-tts-mock:8000']
+    metrics_path: '/health'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+  - job_name: 'pytorch-tts-small'
+    static_configs:
+      - targets: ['pytorch-tts-small:8000']
+    metrics_path: '/health'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+  - job_name: 'pytorch-tts-full-gpu'
+    static_configs:
+      - targets: ['pytorch-tts-full-gpu:8000']
+    metrics_path: '/health'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+  - job_name: 'pytorch-tts-full-cpu'
+    static_configs:
+      - targets: ['pytorch-tts-full-cpu:8000']
+    metrics_path: '/health'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+  # NGINX Load Balancer
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx-lb:8080']
+    metrics_path: '/nginx_status'
+    scrape_interval: 15s
+
+  # System metrics (if node_exporter is available)
+  - job_name: 'node'
+    static_configs:
+      - targets: ['localhost:9100']
+    scrape_interval: 15s
+
+# Alerting rules for memory monitoring
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          # - alertmanager:9093
+
+# Memory-related alerting rules (example)
+# Save to rules/memory_alerts.yml if using
+# groups:
+#   - name: memory_alerts
+#     rules:
+#     - alert: HighMemoryUsage
+#       expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes > 0.8
+#       for: 5m
+#       labels:
+#         severity: warning
+#       annotations:
+#         summary: "High memory usage detected"
+#         description: "Memory usage is above 80% for more than 5 minutes"
+#
+#     - alert: TTSServerDown
+#       expr: up{job=~"pytorch-tts-.*"} == 0
+#       for: 1m
+#       labels:
+#         severity: critical
+#       annotations:
+#         summary: "TTS Server is down"
+#         description: "{{ $labels.job }} has been down for more than 1 minute"

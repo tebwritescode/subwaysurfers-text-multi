@@ -1,0 +1,69 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Models and cache (will be mounted as volumes)
+models/
+cache/
+*.pt
+*.bin
+*.safetensors
+*.onnx
+
+# Temporary files
+temp/
+tmp/
+*.tmp
+*.temp
+*.wav
+*.mp3
+*.mp4
+
+# Documentation
+docs/
+*.md
+README.*
+
+# Git
+.git/
+.gitignore
+.github/
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db

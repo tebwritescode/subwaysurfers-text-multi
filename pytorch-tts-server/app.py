@@ -8,8 +8,18 @@ import io
 import base64
 import tempfile
 import asyncio
+import threading
+import time
+import gc
+try:
+    import psutil
+except ImportError:
+    psutil = None
+    logger.warning("psutil not available - memory monitoring disabled")
 from pathlib import Path
-from typing import Optional, Dict, List, Any
+from typing import Optional, Dict, List, Any, Tuple
+from functools import lru_cache
+from collections import OrderedDict
 import logging
 
 import numpy as np
@@ -52,9 +62,257 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Global model cache
-model_cache = {}
+# Global variables
 device = None
+
+# Cache configuration
+CACHE_CONFIG = {
+    "max_models": int(os.getenv("MAX_CACHED_MODELS", "3")),  # Maximum models in memory
+    "memory_threshold_gb": float(os.getenv("MEMORY_THRESHOLD_GB", "12.0")),  # Memory threshold for cleanup
+    "cache_warmup_enabled": os.getenv("CACHE_WARMUP_ENABLED", "true").lower() == "true",
+    "warmup_models": os.getenv("WARMUP_MODELS", "suno/bark-small,suno/bark").split(","),
+    "gc_interval_seconds": int(os.getenv("GC_INTERVAL_SECONDS", "300")),  # 5 minutes
+    "memory_check_interval": int(os.getenv("MEMORY_CHECK_INTERVAL", "60"))  # 1 minute
+}
+
+class ModelCache:
+    """Thread-safe singleton model cache with LRU eviction and memory management"""
+    _instance = None
+    _lock = threading.Lock()
+
+    def __new__(cls):
+        if cls._instance is None:
+            with cls._lock:
+                if cls._instance is None:
+                    cls._instance = super().__new__(cls)
+                    cls._instance._initialized = False
+        return cls._instance
+
+    def __init__(self):
+        if self._initialized:
+            return
+
+        self._cache = OrderedDict()  # LRU cache
+        self._access_times = {}  # Track access times
+        self._model_sizes = {}  # Track model memory usage
+        self._lock = threading.RLock()  # Reentrant lock for nested calls
+        self._warmup_task = None
+        self._gc_task = None
+        self._memory_monitor_task = None
+        self._stats = {
+            "hits": 0,
+            "misses": 0,
+            "evictions": 0,
+            "memory_cleanups": 0,
+            "total_loads": 0
+        }
+        self._initialized = True
+
+        # Start background tasks
+        self._start_background_tasks()
+
+        logger.info(f"Initialized ModelCache with max_models={CACHE_CONFIG['max_models']}, memory_threshold={CACHE_CONFIG['memory_threshold_gb']}GB")
+
+    def _start_background_tasks(self):
+        """Start background tasks for cache management"""
+        # Garbage collection task
+        def gc_worker():
+            while True:
+                time.sleep(CACHE_CONFIG["gc_interval_seconds"])
+                self._force_gc()
+
+        # Memory monitoring task
+        def memory_monitor():
+            while True:
+                time.sleep(CACHE_CONFIG["memory_check_interval"])
+                self._check_memory_pressure()
+
+        self._gc_task = threading.Thread(target=gc_worker, daemon=True)
+        self._memory_monitor_task = threading.Thread(target=memory_monitor, daemon=True)
+
+        self._gc_task.start()
+        self._memory_monitor_task.start()
+
+        logger.info("Started background cache management tasks")
+
+    def get(self, model_name: str) -> Optional[Dict]:
+        """Get model from cache with LRU update"""
+        with self._lock:
+            if model_name in self._cache:
+                # Move to end (most recently used)
+                model_data = self._cache.pop(model_name)
+                self._cache[model_name] = model_data
+                self._access_times[model_name] = time.time()
+                self._stats["hits"] += 1
+                logger.debug(f"Cache hit for model: {model_name}")
+                return model_data
+
+            self._stats["misses"] += 1
+            logger.debug(f"Cache miss for model: {model_name}")
+            return None
+
+    def put(self, model_name: str, model_data: Dict, size_bytes: int = 0):
+        """Put model in cache with size tracking and LRU eviction"""
+        with self._lock:
+            # Remove if already exists (for updates)
+            if model_name in self._cache:
+                del self._cache[model_name]
+                if model_name in self._model_sizes:
+                    del self._model_sizes[model_name]
+
+            # Check if we need to evict models
+            while len(self._cache) >= CACHE_CONFIG["max_models"]:
+                self._evict_lru()
+
+            # Add new model
+            self._cache[model_name] = model_data
+            self._access_times[model_name] = time.time()
+            self._model_sizes[model_name] = size_bytes
+            self._stats["total_loads"] += 1
+
+            logger.info(f"Cached model: {model_name} (size: {size_bytes / 1024 / 1024:.1f}MB, total cached: {len(self._cache)})")
+
+    def _evict_lru(self):
+        """Evict least recently used model"""
+        if not self._cache:
+            return
+
+        # Get LRU model (first in OrderedDict)
+        lru_model = next(iter(self._cache))
+        model_data = self._cache.pop(lru_model)
+
+        # Cleanup model resources
+        self._cleanup_model(model_data)
+
+        # Remove tracking data
+        if lru_model in self._access_times:
+            del self._access_times[lru_model]
+        if lru_model in self._model_sizes:
+            del self._model_sizes[lru_model]
+
+        self._stats["evictions"] += 1
+        logger.info(f"Evicted LRU model: {lru_model}")
+
+    def _cleanup_model(self, model_data: Dict):
+        """Cleanup model resources"""
+        try:
+            # Move models to CPU to free GPU memory
+            if "model" in model_data and hasattr(model_data["model"], "to"):
+                model_data["model"].to("cpu")
+            if "vocoder" in model_data and hasattr(model_data["vocoder"], "to"):
+                model_data["vocoder"].to("cpu")
+
+            # Clear CUDA cache if available
+            if torch and torch.cuda.is_available():
+                torch.cuda.empty_cache()
+
+        except Exception as e:
+            logger.warning(f"Error during model cleanup: {e}")
+
+    def _check_memory_pressure(self):
+        """Check system memory and cleanup if necessary"""
+        if psutil is None:
+            return  # Skip if psutil not available
+
+        try:
+            memory_gb = psutil.virtual_memory().used / (1024**3)
+            if memory_gb > CACHE_CONFIG["memory_threshold_gb"]:
+                logger.warning(f"Memory pressure detected: {memory_gb:.1f}GB > {CACHE_CONFIG['memory_threshold_gb']}GB")
+                self._emergency_cleanup()
+        except Exception as e:
+            logger.error(f"Error checking memory pressure: {e}")
+
+    def _emergency_cleanup(self):
+        """Emergency memory cleanup - evict half the cache"""
+        with self._lock:
+            models_to_evict = len(self._cache) // 2
+            for _ in range(models_to_evict):
+                if self._cache:
+                    self._evict_lru()
+
+            self._force_gc()
+            self._stats["memory_cleanups"] += 1
+            logger.info(f"Emergency cleanup completed, evicted {models_to_evict} models")
+
+    def _force_gc(self):
+        """Force garbage collection and CUDA cache cleanup"""
+        try:
+            gc.collect()
+            if torch and torch.cuda.is_available():
+                torch.cuda.empty_cache()
+            logger.debug("Performed garbage collection")
+        except Exception as e:
+            logger.warning(f"Error during garbage collection: {e}")
+
+    def clear(self):
+        """Clear entire cache"""
+        with self._lock:
+            # Cleanup all models
+            for model_data in self._cache.values():
+                self._cleanup_model(model_data)
+
+            self._cache.clear()
+            self._access_times.clear()
+            self._model_sizes.clear()
+            self._force_gc()
+
+            logger.info("Cache cleared")
+
+    def get_stats(self) -> Dict:
+        """Get cache statistics"""
+        with self._lock:
+            cache_memory_mb = sum(self._model_sizes.values()) / (1024 * 1024)
+
+            stats = {
+                "cached_models": list(self._cache.keys()),
+                "cache_size": len(self._cache),
+                "max_cache_size": CACHE_CONFIG["max_models"],
+                "cache_memory_mb": round(cache_memory_mb, 1),
+                "memory_threshold_gb": CACHE_CONFIG["memory_threshold_gb"],
+                "hits": self._stats["hits"],
+                "misses": self._stats["misses"],
+                "hit_rate": self._stats["hits"] / max(1, self._stats["hits"] + self._stats["misses"]),
+                "evictions": self._stats["evictions"],
+                "memory_cleanups": self._stats["memory_cleanups"],
+                "total_loads": self._stats["total_loads"]
+            }
+
+            # Add system memory info if psutil is available
+            if psutil is not None:
+                try:
+                    memory_info = psutil.virtual_memory()
+                    stats["system_memory_gb"] = round(memory_info.used / (1024**3), 1)
+                    stats["system_memory_total_gb"] = round(memory_info.total / (1024**3), 1)
+                    stats["system_memory_percent"] = memory_info.percent
+                except Exception as e:
+                    logger.warning(f"Could not get system memory info: {e}")
+                    stats["system_memory_gb"] = "unavailable"
+            else:
+                stats["system_memory_gb"] = "psutil_not_available"
+
+            return stats
+
+    def warmup(self, model_names: List[str]):
+        """Warm up cache with specified models"""
+        def warmup_worker():
+            for model_name in model_names:
+                try:
+                    logger.info(f"Warming up model: {model_name}")
+                    load_model(model_name)  # This will cache the model
+                    time.sleep(1)  # Brief pause between models
+                except Exception as e:
+                    logger.error(f"Failed to warm up model {model_name}: {e}")
+            logger.info("Cache warmup completed")
+
+        if CACHE_CONFIG["cache_warmup_enabled"]:
+            self._warmup_task = threading.Thread(target=warmup_worker, daemon=True)
+            self._warmup_task.start()
+            logger.info(f"Started cache warmup for models: {model_names}")
+        else:
+            logger.info("Cache warmup disabled")
+
+# Initialize singleton cache instance
+model_cache = ModelCache()
 
 def get_device():
     """Get compute device lazily"""
@@ -103,17 +361,44 @@ SUPPORTED_MODELS = {
     }
 }
 
+def estimate_model_size(model_data: Dict) -> int:
+    """Estimate model memory usage in bytes"""
+    total_bytes = 0
+    try:
+        for key, obj in model_data.items():
+            if hasattr(obj, 'parameters'):
+                # PyTorch model
+                for param in obj.parameters():
+                    total_bytes += param.element_size() * param.nelement()
+            elif hasattr(obj, '__sizeof__'):
+                total_bytes += obj.__sizeof__()
+    except Exception as e:
+        logger.warning(f"Could not estimate model size: {e}")
+        # Fallback estimates based on model type
+        model_type = model_data.get("type", "unknown")
+        if "bark" in model_type:
+            total_bytes = 6 * 1024**3  # 6GB estimate for Bark
+        elif "speecht5" in model_type:
+            total_bytes = 1 * 1024**3  # 1GB estimate for SpeechT5
+        else:
+            total_bytes = 500 * 1024**2  # 500MB default
+
+    return total_bytes
+
 def load_model(model_name: str):
-    """Load and cache a TTS model"""
-    if model_name in model_cache:
-        return model_cache[model_name]
+    """Load and cache a TTS model with optimized caching"""
+    # Check cache first
+    cached_model = model_cache.get(model_name)
+    if cached_model is not None:
+        return cached_model
 
     # Ensure libraries are imported
     lazy_import()
     device = get_device()
 
     logger.info(f"Loading model: {model_name}")
-    
+    load_start_time = time.time()
+
     try:
         if model_name not in SUPPORTED_MODELS:
             # Try generic transformers pipeline
@@ -124,40 +409,44 @@ def load_model(model_name: str):
         else:
             model_config = SUPPORTED_MODELS[model_name]
             model_data = {"type": model_config["type"]}
-            
+
             if model_config["type"] in ["bark", "bark_small"]:
                 # Set environment variables for memory optimization
                 import os
                 if model_config["type"] == "bark_small":
                     os.environ["SUNO_USE_SMALL_MODELS"] = "True"
-                
+
                 # Enable CPU offloading for memory efficiency
                 if not torch.cuda.is_available() or torch.cuda.get_device_properties(0).total_memory < 8e9:
                     os.environ["SUNO_OFFLOAD_CPU"] = "True"
-                
+
                 processor = transformers.AutoProcessor.from_pretrained(model_name)
                 model = transformers.BarkModel.from_pretrained(model_name).to(device)
-                
+
                 model_data.update({
                     "processor": processor,
                     "model": model
                 })
-                
+
             elif model_config["type"] == "speecht5":
                 processor = transformers.SpeechT5Processor.from_pretrained(model_name)
                 model = transformers.SpeechT5ForTextToSpeech.from_pretrained(model_name).to(device)
                 vocoder = transformers.SpeechT5HifiGan.from_pretrained(model_config["vocoder"]).to(device)
-                
+
                 model_data.update({
                     "processor": processor,
                     "model": model,
                     "vocoder": vocoder
                 })
-        
-        model_cache[model_name] = model_data
-        logger.info(f"Successfully loaded model: {model_name}")
+
+        # Estimate model size and cache it
+        model_size = estimate_model_size(model_data)
+        model_cache.put(model_name, model_data, model_size)
+
+        load_time = time.time() - load_start_time
+        logger.info(f"Successfully loaded model: {model_name} in {load_time:.1f}s (size: {model_size / 1024 / 1024:.1f}MB)")
         return model_data
-        
+
     except Exception as e:
         logger.error(f"Failed to load model {model_name}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to load model: {str(e)}")
@@ -250,10 +539,44 @@ def synthesize_bark(model_data: Dict, text: str, voice: str = "narrator") -> tup
     
     return audio, sample_rate
 
+@app.on_event("startup")
+async def startup_event():
+    """Initialize cache and start warmup on server startup"""
+    logger.info("Starting PyTorch TTS Server...")
+
+    # Initialize device
+    get_device()
+
+    # Start cache warmup
+    if CACHE_CONFIG["cache_warmup_enabled"]:
+        warmup_models = [model.strip() for model in CACHE_CONFIG["warmup_models"] if model.strip()]
+        if warmup_models:
+            model_cache.warmup(warmup_models)
+
+    logger.info("Server startup completed")
+
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
-    return {"status": "healthy", "device": str(get_device()) if device else "not_initialized"}
+    """Health check endpoint with cache status"""
+    try:
+        device_info = str(get_device()) if device else "not_initialized"
+        cache_stats = model_cache.get_stats()
+
+        return {
+            "status": "healthy",
+            "device": device_info,
+            "cache": {
+                "cached_models": len(cache_stats["cached_models"]),
+                "cache_memory_mb": cache_stats["cache_memory_mb"],
+                "system_memory_gb": cache_stats["system_memory_gb"],
+                "hit_rate": round(cache_stats["hit_rate"], 3)
+            },
+            "pytorch_loaded": torch is not None,
+            "timestamp": time.time()
+        }
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return {"status": "unhealthy", "error": str(e)}
 
 @app.get("/voices")
 async def get_voices():
@@ -285,8 +608,97 @@ async def get_voices():
 
 @app.get("/models")
 async def get_models():
-    """Get supported models"""
-    return {"models": list(SUPPORTED_MODELS.keys()), "details": SUPPORTED_MODELS}
+    """Get supported models with cache status"""
+    cache_stats = model_cache.get_stats()
+    cached_models = cache_stats["cached_models"]
+
+    models_info = {}
+    for model_name, config in SUPPORTED_MODELS.items():
+        models_info[model_name] = {
+            **config,
+            "cached": model_name in cached_models
+        }
+
+    return {
+        "models": list(SUPPORTED_MODELS.keys()),
+        "details": models_info,
+        "cache_status": {
+            "cached_models": cached_models,
+            "cache_size": cache_stats["cache_size"],
+            "max_cache_size": cache_stats["max_cache_size"]
+        }
+    }
+
+@app.get("/cache/stats")
+async def get_cache_stats():
+    """Get detailed cache statistics"""
+    return model_cache.get_stats()
+
+@app.post("/cache/clear")
+async def clear_cache():
+    """Clear model cache"""
+    try:
+        stats_before = model_cache.get_stats()
+        model_cache.clear()
+        stats_after = model_cache.get_stats()
+
+        return {
+            "success": True,
+            "message": "Cache cleared successfully",
+            "freed_memory_mb": stats_before["cache_memory_mb"],
+            "models_cleared": stats_before["cached_models"]
+        }
+    except Exception as e:
+        logger.error(f"Failed to clear cache: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to clear cache: {str(e)}")
+
+@app.post("/cache/warmup")
+async def warmup_cache(models: List[str] = None):
+    """Manually trigger cache warmup for specific models"""
+    try:
+        if models is None:
+            models = [model.strip() for model in CACHE_CONFIG["warmup_models"] if model.strip()]
+
+        if not models:
+            return {"success": False, "message": "No models specified for warmup"}
+
+        # Start warmup in background
+        model_cache.warmup(models)
+
+        return {
+            "success": True,
+            "message": f"Cache warmup started for {len(models)} models",
+            "models": models
+        }
+    except Exception as e:
+        logger.error(f"Failed to start cache warmup: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to start cache warmup: {str(e)}")
+
+@app.post("/cache/preload/{model_name}")
+async def preload_model(model_name: str):
+    """Preload a specific model into cache"""
+    try:
+        logger.info(f"Preloading model: {model_name}")
+        start_time = time.time()
+
+        # Load model (this will cache it)
+        load_model(model_name)
+
+        load_time = time.time() - start_time
+        cache_stats = model_cache.get_stats()
+
+        return {
+            "success": True,
+            "message": f"Model {model_name} preloaded successfully",
+            "load_time_seconds": round(load_time, 2),
+            "cache_status": {
+                "cached_models": cache_stats["cached_models"],
+                "cache_memory_mb": cache_stats["cache_memory_mb"]
+            }
+        }
+    except Exception as e:
+        logger.error(f"Failed to preload model {model_name}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to preload model: {str(e)}")
 
 @app.post("/test-voices")
 async def test_voices(voices: List[str] = None):
@@ -454,7 +866,11 @@ async def clone_voice(
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8000))
     host = os.getenv("HOST", "0.0.0.0")
-    
+
+    logger.info(f"Starting PyTorch TTS Server on {host}:{port}")
+    logger.info(f"Cache config: max_models={CACHE_CONFIG['max_models']}, memory_threshold={CACHE_CONFIG['memory_threshold_gb']}GB")
+    logger.info(f"Cache warmup: {'enabled' if CACHE_CONFIG['cache_warmup_enabled'] else 'disabled'}")
+
     uvicorn.run(
         "app:app",
         host=host,

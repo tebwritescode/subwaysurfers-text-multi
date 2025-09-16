@@ -1,0 +1,90 @@
+# GPU-optimized PyTorch TTS Server Docker Image
+# Serves Bark TTS models with CUDA acceleration
+
+# Use NVIDIA CUDA base image
+FROM nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    DEBIAN_FRONTEND=noninteractive \
+    PYTHONDONTWRITEBYTECODE=1 \
+    # CUDA settings
+    CUDA_VISIBLE_DEVICES=0 \
+    TORCH_CUDA_ARCH_LIST="6.0;6.1;7.0;7.5;8.0;8.6;8.9;9.0" \
+    # PyTorch optimizations for GPU
+    PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:4096 \
+    # Model cache directories
+    TRANSFORMERS_CACHE=/app/cache \
+    HF_HOME=/app/models \
+    TORCH_HOME=/app/models/torch
+
+# Install Python and system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3.11 \
+    python3.11-venv \
+    python3.11-dev \
+    python3-pip \
+    gcc \
+    g++ \
+    make \
+    libsndfile1 \
+    ffmpeg \
+    git \
+    curl \
+    espeak-ng \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Set Python 3.11 as default
+RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1 && \
+    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
+
+# Upgrade pip
+RUN python -m pip install --upgrade pip setuptools wheel
+
+# Set working directory
+WORKDIR /app
+
+# Copy requirements first for better caching
+COPY requirements.txt .
+
+# Install PyTorch with CUDA support
+RUN pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu118
+
+# Install remaining dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Install additional GPU optimization libraries
+RUN pip install --no-cache-dir \
+    nvidia-ml-py3 \
+    gpustat \
+    py3nvml
+
+# Copy application code
+COPY . .
+
+# Create directories for models and cache
+RUN mkdir -p /app/models /app/cache /app/temp /app/voices
+
+# Create non-root user for security
+RUN useradd -m -u 1000 -s /bin/bash ttsuser && \
+    chown -R ttsuser:ttsuser /app
+
+# Ensure scripts are executable
+RUN chmod +x /app/start.sh
+
+# Switch to non-root user
+USER ttsuser
+
+# Create volume mount points
+VOLUME ["/app/models", "/app/cache", "/app/voices"]
+
+# Expose port
+EXPOSE 8000
+
+# Health check with proper timeout for model loading
+HEALTHCHECK --interval=30s --timeout=15s --start_period=180s --retries=5 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Start command
+CMD ["./start.sh"]

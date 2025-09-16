@@ -1,0 +1,325 @@
+[
+  {
+    "timestamp": 1758053761.431177,
+    "phase": "mock_server",
+    "process_memory": {
+      "rss": 216940544,
+      "vms": 446037164032,
+      "rss_mb": 206.890625,
+      "vms_mb": 425374.1875,
+      "percent": 0.5612267388237847
+    },
+    "system_memory": {
+      "total_mb": 36864.0,
+      "available_mb": 15619.453125,
+      "used_mb": 18154.984375,
+      "percent": 57.6
+    },
+    "gpu_memory": null,
+    "label": "baseline"
+  },
+  {
+    "timestamp": 1758053761.448437,
+    "phase": "mock_server",
+    "process_memory": {
+      "rss": 216940544,
+      "vms": 446037164032,
+      "rss_mb": 206.890625,
+      "vms_mb": 425374.1875,
+      "percent": 0.5612267388237847
+    },
+    "system_memory": {
+      "total_mb": 36864.0,
+      "available_mb": 15619.453125,
+      "used_mb": 18154.984375,
+      "percent": 57.6
+    },
+    "gpu_memory": null,
+    "label": "before_mock_operations"
+  },
+  {
+    "timestamp": 1758053761.465847,
+    "phase": "mock_generation_0",
+    "process_memory": {
+      "rss": 217546752,
+      "vms": 446037164032,
+      "rss_mb": 207.46875,
+      "vms_mb": 425374.1875,
+      "percent": 0.5627950032552083
+    },
+    "system_memory": {
+      "total_mb": 36864.0,
+      "available_mb": 15619.453125,
+      "used_mb": 18154.984375,
+      "percent": 57.6
+    },
+    "gpu_memory": null,
+    "label": "mock_audio_0_generated"
+  },
+  {
+    "timestamp": 1758053761.4811578,
+    "phase": "mock_generation_0",
+    "process_memory": {
+      "rss": 217546752,
+      "vms": 446037164032,
+      "rss_mb": 207.46875,
+      "vms_mb": 425374.1875,
+      "percent": 0.5627950032552083
+    },
+    "system_memory": {
+      "total_mb": 36864.0,
+      "available_mb": 15619.453125,
+      "used_mb": 18154.984375,
+      "percent": 57.6
+    },
+    "gpu_memory": null,
+    "label": "mock_audio_0_encoded"
+  },
+  {
+    "timestamp": 1758053761.511743,
+    "phase": "mock_generation_0",
+    "process_memory": {
+      "rss": 217546752,
+      "vms": 446037164032,
+      "rss_mb": 207.46875,
+      "vms_mb": 425374.1875,
+      "percent": 0.5627950032552083
+    },
+    "system_memory": {
+      "total_mb": 36864.0,
+      "available_mb": 15619.453125,
+      "used_mb": 18154.984375,
+      "percent": 57.6
+    },
+    "gpu_memory": null,
+    "label": "mock_audio_0_cleaned"
+  },
+  {
+    "timestamp": 1758053761.5278358,
+    "phase": "mock_generation_1",
+    "process_memory": {
+      "rss": 217546752,
+      "vms": 446037164032,
+      "rss_mb": 207.46875,
+      "vms_mb": 425374.1875,
+      "percent": 0.5627950032552083
+    },
+    "system_memory": {
+      "total_mb": 36864.0,
+      "available_mb": 15619.453125,
+      "used_mb": 18154.984375,
+      "percent": 57.6
+    },
+    "gpu_memory": null,
+    "label": "mock_audio_1_generated"
+  },
+  {
+    "timestamp": 1758053761.5434492,
+    "phase": "mock_generation_1",
+    "process_memory": {
+      "rss": 217546752,
+      "vms": 446037164032,
+      "rss_mb": 207.46875,
+      "vms_mb": 425374.1875,
+      "percent": 0.5627950032552083
+    },
+    "system_memory": {
+      "total_mb": 36864.0,
+      "available_mb": 15619.453125,
+      "used_mb": 18154.984375,
+      "percent": 57.6
+    },
+    "gpu_memory": null,
+    "label": "mock_audio_1_encoded"
+  },
+  {
+    "timestamp": 1758053761.57515,
+    "phase": "mock_generation_1",
+    "process_memory": {
+      "rss": 217546752,
+      "vms": 446037164032,
+      "rss_mb": 207.46875,
+      "vms_mb": 425374.1875,
+      "percent": 0.5627950032552083
+    },
+    "system_memory": {
+      "total_mb": 36864.0,
+      "available_mb": 15619.453125,
+      "used_mb": 18154.984375,
+      "percent": 57.6
+    },
+    "gpu_memory": null,
+    "label": "mock_audio_1_cleaned"
+  },
+  {
+    "timestamp": 1758053761.591576,
+    "phase": "mock_generation_2",
+    "process_memory": {
+      "rss": 217546752,
+      "vms": 446037164032,
+      "rss_mb": 207.46875,
+      "vms_mb": 425374.1875,
+      "percent": 0.5627950032552083
+    },
+    "system_memory": {
+      "total_mb": 36864.0,
+      "available_mb": 15619.453125,
+      "used_mb": 18154.984375,
+      "percent": 57.6
+    },
+    "gpu_memory": null,
+    "label": "mock_audio_2_generated"
+  },
+  {
+    "timestamp": 1758053761.606782,
+    "phase": "mock_generation_2",
+    "process_memory": {
+      "rss": 217563136,
+      "vms": 446037164032,
+      "rss_mb": 207.484375,
+      "vms_mb": 425374.1875,
+      "percent": 0.5628373887803819
+    },
+    "system_memory": {
+      "total_mb": 36864.0,
+      "available_mb": 15619.453125,
+      "used_mb": 18154.984375,
+      "percent": 57.6
+    },
+    "gpu_memory": null,
+    "label": "mock_audio_2_encoded"
+  },
+  {
+    "timestamp": 1758053761.637578,
+    "phase": "mock_generation_2",
+    "process_memory": {
+      "rss": 217563136,
+      "vms": 446037164032,
+      "rss_mb": 207.484375,
+      "vms_mb": 425374.1875,
+      "percent": 0.5628373887803819
+    },
+    "system_memory": {
+      "total_mb": 36864.0,
+      "available_mb": 15619.453125,
+      "used_mb": 18154.984375,
+      "percent": 57.6
+    },
+    "gpu_memory": null,
+    "label": "mock_audio_2_cleaned"
+  },
+  {
+    "timestamp": 1758053761.653715,
+    "phase": "mock_generation_3",
+    "process_memory": {
+      "rss": 217563136,
+      "vms": 446037164032,
+      "rss_mb": 207.484375,
+      "vms_mb": 425374.1875,
+      "percent": 0.5628373887803819
+    },
+    "system_memory": {
+      "total_mb": 36864.0,
+      "available_mb": 15619.453125,
+      "used_mb": 18154.984375,
+      "percent": 57.6
+    },
+    "gpu_memory": null,
+    "label": "mock_audio_3_generated"
+  },
+  {
+    "timestamp": 1758053761.668963,
+    "phase": "mock_generation_3",
+    "process_memory": {
+      "rss": 217563136,
+      "vms": 446037164032,
+      "rss_mb": 207.484375,
+      "vms_mb": 425374.1875,
+      "percent": 0.5628373887803819
+    },
+    "system_memory": {
+      "total_mb": 36864.0,
+      "available_mb": 15619.453125,
+      "used_mb": 18154.984375,
+      "percent": 57.6
+    },
+    "gpu_memory": null,
+    "label": "mock_audio_3_encoded"
+  },
+  {
+    "timestamp": 1758053761.698813,
+    "phase": "mock_generation_3",
+    "process_memory": {
+      "rss": 217563136,
+      "vms": 446037164032,
+      "rss_mb": 207.484375,
+      "vms_mb": 425374.1875,
+      "percent": 0.5628373887803819
+    },
+    "system_memory": {
+      "total_mb": 36864.0,
+      "available_mb": 15619.453125,
+      "used_mb": 18154.984375,
+      "percent": 57.6
+    },
+    "gpu_memory": null,
+    "label": "mock_audio_3_cleaned"
+  },
+  {
+    "timestamp": 1758053761.714865,
+    "phase": "mock_generation_4",
+    "process_memory": {
+      "rss": 217563136,
+      "vms": 446037164032,
+      "rss_mb": 207.484375,
+      "vms_mb": 425374.1875,
+      "percent": 0.5628373887803819
+    },
+    "system_memory": {
+      "total_mb": 36864.0,
+      "available_mb": 15619.453125,
+      "used_mb": 18154.984375,
+      "percent": 57.6
+    },
+    "gpu_memory": null,
+    "label": "mock_audio_4_generated"
+  },
+  {
+    "timestamp": 1758053761.7300868,
+    "phase": "mock_generation_4",
+    "process_memory": {
+      "rss": 217563136,
+      "vms": 446037164032,
+      "rss_mb": 207.484375,
+      "vms_mb": 425374.1875,
+      "percent": 0.5628373887803819
+    },
+    "system_memory": {
+      "total_mb": 36864.0,
+      "available_mb": 15619.453125,
+      "used_mb": 18154.984375,
+      "percent": 57.6
+    },
+    "gpu_memory": null,
+    "label": "mock_audio_4_encoded"
+  },
+  {
+    "timestamp": 1758053761.761452,
+    "phase": "mock_generation_4",
+    "process_memory": {
+      "rss": 217563136,
+      "vms": 446037164032,
+      "rss_mb": 207.484375,
+      "vms_mb": 425374.1875,
+      "percent": 0.5628373887803819
+    },
+    "system_memory": {
+      "total_mb": 36864.0,
+      "available_mb": 15619.453125,
+      "used_mb": 18154.984375,
+      "percent": 57.6
+    },
+    "gpu_memory": null,
+    "label": "mock_audio_4_cleaned"
+  }
+]

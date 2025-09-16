@@ -1,0 +1,97 @@
+[
+  {
+    "timestamp": 1758053761.1874838,
+    "phase": "baseline",
+    "process_memory": {
+      "rss": 39845888,
+      "vms": 445734256640,
+      "rss_mb": 38.0,
+      "vms_mb": 425085.3125,
+      "percent": 0.10308159722222222
+    },
+    "system_memory": {
+      "total_mb": 36864.0,
+      "available_mb": 15854.09375,
+      "used_mb": 17918.140625,
+      "percent": 57.0
+    },
+    "gpu_memory": null,
+    "label": "baseline"
+  },
+  {
+    "timestamp": 1758053761.20436,
+    "phase": "baseline",
+    "process_memory": {
+      "rss": 199294976,
+      "vms": 446020567040,
+      "rss_mb": 190.0625,
+      "vms_mb": 425358.359375,
+      "percent": 0.5155775282118056
+    },
+    "system_memory": {
+      "total_mb": 36864.0,
+      "available_mb": 15618.1875,
+      "used_mb": 18152.40625,
+      "percent": 57.6
+    },
+    "gpu_memory": null,
+    "label": "python_startup"
+  },
+  {
+    "timestamp": 1758053761.251041,
+    "phase": "basic_imports",
+    "process_memory": {
+      "rss": 201965568,
+      "vms": 446022778880,
+      "rss_mb": 192.609375,
+      "vms_mb": 425360.46875,
+      "percent": 0.5224863688151042
+    },
+    "system_memory": {
+      "total_mb": 36864.0,
+      "available_mb": 15619.453125,
+      "used_mb": 18154.984375,
+      "percent": 57.6
+    },
+    "gpu_memory": null,
+    "label": "numpy_requests_imported"
+  },
+  {
+    "timestamp": 1758053761.2698328,
+    "phase": "basic_imports",
+    "process_memory": {
+      "rss": 202686464,
+      "vms": 446026252288,
+      "rss_mb": 193.296875,
+      "vms_mb": 425363.78125,
+      "percent": 0.5243513319227431
+    },
+    "system_memory": {
+      "total_mb": 36864.0,
+      "available_mb": 15619.453125,
+      "used_mb": 18154.984375,
+      "percent": 57.6
+    },
+    "gpu_memory": null,
+    "label": "soundfile_imported"
+  },
+  {
+    "timestamp": 1758053761.4120672,
+    "phase": "basic_imports",
+    "process_memory": {
+      "rss": 216809472,
+      "vms": 446037164032,
+      "rss_mb": 206.765625,
+      "vms_mb": 425374.1875,
+      "percent": 0.5608876546223958
+    },
+    "system_memory": {
+      "total_mb": 36864.0,
+      "available_mb": 15619.453125,
+      "used_mb": 18154.984375,
+      "percent": 57.6
+    },
+    "gpu_memory": null,
+    "label": "fastapi_imported"
+  }
+]

@@ -18,9 +18,13 @@ services:
       - FLASK_APP=app.py
       - DOCKER_ENV=true
       
-      # TTS Configuration - Use AllTalk TTS server  
-      - PYTORCH_TTS_ENDPOINT=http://alltalk-tts:7851
+      # TTS Configuration - Multiple options available:
+      # Option 1: Use PyTorch TTS with Bark (default)
+      - PYTORCH_TTS_ENDPOINT=http://pytorch-tts:8000
       - PYTORCH_TTS_MODEL=suno/bark
+      # Option 2: Use AllTalk TTS server (uncomment to use)
+      # - PYTORCH_TTS_ENDPOINT=http://alltalk-tts:7851
+      # - PYTORCH_TTS_MODEL=xtts
       
       # ASR Configuration - Use local Whisper server
       - WHISPER_ASR_URL=http://whisper-asr:9000
@@ -36,6 +40,7 @@ services:
       - ./final_videos:/app/final_videos
       - subway_models:/app/models
     depends_on:
+      - pytorch-tts
       - alltalk-tts
       - whisper-asr
     restart: unless-stopped
@@ -74,6 +79,70 @@ services:
     #         - driver: nvidia
     #           count: 1
     #           capabilities: [gpu]
+
+  # PyTorch TTS Server (Bark TTS)
+  # Supports Bark models from Suno AI with realistic speech generation
+  pytorch-tts:
+    build:
+      context: ./pytorch-tts-server
+      dockerfile: Dockerfile
+    container_name: pytorch-tts-server
+    ports:
+      - "8001:8000"  # PyTorch TTS API
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - LOG_LEVEL=info
+      - PYTHONUNBUFFERED=1
+      # Model configuration - choose based on deployment type:
+      # For development/testing with mock:
+      # - USE_MOCK=true
+      # For production with small models (6GB RAM):
+      # - SUNO_USE_SMALL_MODELS=true
+      # - SUNO_OFFLOAD_CPU=true
+      # For production with full models (9GB+ RAM):
+      - SUNO_USE_SMALL_MODELS=false
+      - SUNO_OFFLOAD_CPU=false
+      # Cache configuration
+      - TRANSFORMERS_CACHE=/app/cache
+      - HF_HOME=/app/models
+      - PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:2048
+      # Preload Bark model on startup (optional, increases startup time but faster first request)
+      # - PRELOAD_MODELS=suno/bark,suno/bark-small
+    volumes:
+      # Persist models and cache
+      - pytorch_models:/app/models
+      - pytorch_cache:/app/cache
+      - ./pytorch-tts-server/voices:/app/voices  # Custom voice samples
+      - ./temp:/app/temp  # Temporary audio files
+    restart: unless-stopped
+    networks:
+      - subway-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s  # Allow time for model loading
+    deploy:
+      resources:
+        limits:
+          memory: 9G        # Adjust based on model size (6G for small, 9G+ for full)
+          cpus: '4.0'
+        reservations:
+          memory: 4G        # Minimum memory required
+          cpus: '2.0'
+    # Uncomment for GPU support
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+    #     limits:
+    #       memory: 12G  # GPU needs more memory
+    #   runtime: nvidia
 
   # Whisper ASR Server
   whisper-asr:
@@ -145,7 +214,11 @@ volumes:
     driver: local
   subway_models:
     driver: local
-  
+  pytorch_models:
+    driver: local
+  pytorch_cache:
+    driver: local
+
   # Optional volumes
   # redis_data:
   #   driver: local

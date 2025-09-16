@@ -70,14 +70,76 @@
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
-        
+
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        
+
         .processing-active .processing-spinner {
             display: inline-block;
+        }
+
+        /* Bark TTS specific progress indicators */
+        .bark-tts-indicator {
+            display: none;
+            background: linear-gradient(135deg, #e67e22, #f39c12);
+            color: white;
+            padding: 1em 2em;
+            border-radius: 12px;
+            margin: 1em 0;
+            text-align: center;
+            border: 2px solid #d35400;
+            box-shadow: 0 4px 15px rgba(230, 126, 34, 0.3);
+        }
+
+        .bark-tts-indicator.active {
+            display: block;
+            animation: bark-pulse 2s infinite;
+        }
+
+        @keyframes bark-pulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 4px 15px rgba(230, 126, 34, 0.3); }
+            50% { transform: scale(1.02); box-shadow: 0 6px 20px rgba(230, 126, 34, 0.5); }
+        }
+
+        .bark-model-status {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1em;
+            margin: 0.5em 0;
+        }
+
+        .bark-status-icon {
+            font-size: 1.5em;
+            animation: bark-rotate 3s linear infinite;
+        }
+
+        @keyframes bark-rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .bark-status-text {
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+
+        .bark-timing-info {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-top: 0.5em;
+        }
+
+        /* Enhanced progress steps for Bark */
+        .progress-step.bark-active {
+            background: linear-gradient(135deg, #e67e22, #f39c12);
+            color: white;
+            padding: 0.8em 1.5em;
+            border-radius: 20px;
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(230, 126, 34, 0.4);
         }
     </style>
 </head>
@@ -94,11 +156,28 @@
             <div class="progress-step" id="step-video">Video Creation</div>
             <div class="progress-step" id="step-merge">Merging & Finalizing</div>
         </div>
+
+        <!-- Bark TTS Status Indicator -->
+        <div class="bark-tts-indicator" id="bark-tts-indicator">
+            <div class="bark-model-status">
+                <span class="bark-status-icon">🎭</span>
+                <div class="bark-status-text">
+                    <div id="bark-status-title">Initializing Bark TTS Model</div>
+                    <div class="bark-timing-info" id="bark-timing-info">Model loading may take 30-60 seconds...</div>
+                </div>
+            </div>
+        </div>
+
         <div class="progress-bar-bg">
             <div class="progress-bar" id="progress-bar" style="width: 0%;"></div>
             <span id="progress-status" class="progress-status">Starting...</span>
         </div>
         <div id="progress-percentage" style="margin-top: 10px; text-align: center; font-weight: 600;">0%</div>
+
+        <!-- TTS System Information -->
+        <div style="margin-top: 1em; text-align: center; font-size: 0.9em; opacity: 0.8;">
+            <span id="tts-system-info">Processing with standard TTS</span>
+        </div>
     </div>
 
     <div id="error-container" style="display: none;">
@@ -127,17 +206,41 @@
             'setup': 'step-validation',
             'audio': 'step-audio',
             'processing': 'step-audio',
+            'bark_init': 'step-audio',
+            'bark_loading': 'step-audio',
+            'bark_synthesis': 'step-audio',
             'video': 'step-video',
             'merge': 'step-merge',
             'finalizing': 'step-merge',
             'completed': 'step-merge'
         };
 
+        // Bark TTS specific elements
+        const barkIndicator = document.getElementById('bark-tts-indicator');
+        const barkStatusTitle = document.getElementById('bark-status-title');
+        const barkTimingInfo = document.getElementById('bark-timing-info');
+        const ttsSystemInfo = document.getElementById('tts-system-info');
+        let isBarkTTS = false;
+        let barkStartTime = null;
+
         function setStepActive(step) {
             // Reset all steps
             document.querySelectorAll('.progress-step').forEach(el => {
-                el.classList.remove('active', 'done');
+                el.classList.remove('active', 'done', 'bark-active');
             });
+
+            // Handle Bark TTS specific steps
+            if (step.startsWith('bark_')) {
+                isBarkTTS = true;
+                if (!barkStartTime) barkStartTime = Date.now();
+
+                // Show Bark indicator
+                barkIndicator.classList.add('active');
+                ttsSystemInfo.textContent = 'Processing with Bark TTS (Neural Voice Synthesis)';
+
+                // Update Bark status based on step
+                updateBarkStatus(step);
+            }
 
             // Mark completed steps as done and current as active
             const stepOrder = ['step-validation', 'step-audio', 'step-video', 'step-merge'];
@@ -149,9 +252,37 @@
                 if (index < currentIndex) {
                     el.classList.add('done');
                 } else if (index === currentIndex) {
-                    el.classList.add('active');
+                    if (isBarkTTS && stepId === 'step-audio') {
+                        el.classList.add('bark-active');
+                    } else {
+                        el.classList.add('active');
+                    }
                 }
             });
+        }
+
+        function updateBarkStatus(step) {
+            const elapsed = barkStartTime ? Math.floor((Date.now() - barkStartTime) / 1000) : 0;
+
+            switch(step) {
+                case 'bark_init':
+                    barkStatusTitle.textContent = 'Initializing Bark TTS Model';
+                    barkTimingInfo.textContent = 'Loading neural network components...';
+                    break;
+                case 'bark_loading':
+                    barkStatusTitle.textContent = 'Loading Voice Model';
+                    barkTimingInfo.textContent = `Preparing voice synthesis (${elapsed}s elapsed)`;
+                    break;
+                case 'bark_synthesis':
+                    barkStatusTitle.textContent = 'Synthesizing Natural Speech';
+                    barkTimingInfo.textContent = `Generating expressive audio (${elapsed}s elapsed)`;
+                    break;
+                default:
+                    if (isBarkTTS) {
+                        barkStatusTitle.textContent = 'Bark TTS Processing';
+                        barkTimingInfo.textContent = `Processing with neural voice model (${elapsed}s elapsed)`;
+                    }
+            }
         }
 
         function showError(error) {
@@ -174,7 +305,7 @@
         eventSource.onmessage = function(event) {
             try {
                 const data = JSON.parse(event.data);
-                
+
                 if (data.error) {
                     showError(data.error);
                     eventSource.close();
@@ -196,9 +327,29 @@
 
                 if (data.message) {
                     progressStatus.textContent = data.message;
+
+                    // Update Bark status if it's a Bark-related message
+                    if (isBarkTTS && data.step && data.step.startsWith('bark_')) {
+                        updateBarkStatus(data.step);
+                    }
+                }
+
+                // Handle TTS system detection
+                if (data.tts_system) {
+                    if (data.tts_system === 'bark') {
+                        isBarkTTS = true;
+                        ttsSystemInfo.textContent = 'Processing with Bark TTS (Neural Voice Synthesis)';
+                    } else {
+                        ttsSystemInfo.textContent = `Processing with ${data.tts_system} TTS`;
+                    }
                 }
 
                 if (data.step === 'completed' && data.progress >= 100) {
+                    // Hide Bark indicator on completion
+                    if (barkIndicator) {
+                        barkIndicator.classList.remove('active');
+                    }
+
                     setTimeout(() => {
                         redirectToOutput();
                     }, 1000);
@@ -221,6 +372,28 @@
 
         // Set initial state
         setStepActive('validation');
+
+        // Detect if we're using Bark TTS from URL parameters or session data
+        const urlParams = new URLSearchParams(window.location.search);
+        const voice = urlParams.get('voice');
+        if (voice && (voice.includes('bark') || voice.includes('speaker'))) {
+            isBarkTTS = true;
+            ttsSystemInfo.textContent = 'Processing with Bark TTS (Neural Voice Synthesis)';
+        }
+
+        // Update Bark timing every second when active
+        setInterval(() => {
+            if (isBarkTTS && barkStartTime && barkIndicator.classList.contains('active')) {
+                const currentStep = document.querySelector('.progress-step.bark-active, .progress-step.active');
+                if (currentStep && currentStep.id === 'step-audio') {
+                    const elapsed = Math.floor((Date.now() - barkStartTime) / 1000);
+                    const current = barkTimingInfo.textContent;
+                    if (current.includes('(') && current.includes('s elapsed)')) {
+                        barkTimingInfo.textContent = current.replace(/\(\d+s elapsed\)/, `(${elapsed}s elapsed)`);
+                    }
+                }
+            }
+        }, 1000);
     </script>
 </body>
 </html>

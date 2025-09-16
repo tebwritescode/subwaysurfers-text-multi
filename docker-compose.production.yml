@@ -1,0 +1,311 @@
+# Production Docker Compose Configuration
+# Optimized for performance with GPU support and proper resource allocation
+
+version: '3.8'
+
+services:
+  # Production Subway Surfers Application
+  subway-surfers-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      cache_from:
+        - ghcr.io/yourusername/subway-surfers:latest
+    container_name: subway-surfers-app-prod
+    ports:
+      - "5001:5000"
+    environment:
+      # Production settings
+      - PRODUCTION=true
+      - PORT=5000
+      - LOG_LEVEL=warning
+      - DOCKER_ENV=true
+
+      # TTS Configuration - Bark with GPU
+      - PYTORCH_TTS_ENDPOINT=http://pytorch-tts-gpu:8000
+      - PYTORCH_TTS_MODEL=suno/bark
+      - TTS_TIMEOUT=60
+
+      # ASR Configuration
+      - WHISPER_ASR_URL=http://whisper-asr-gpu:9000
+      - CAPTION_TIMING_OFFSET=0.0
+
+      # Performance settings
+      - WORKERS=4
+      - THREADS=2
+
+    volumes:
+      - ./static:/app/static:ro
+      - production_videos:/app/final_videos
+      - production_models:/app/models
+    depends_on:
+      pytorch-tts-gpu:
+        condition: service_healthy
+      whisper-asr-gpu:
+        condition: service_healthy
+    restart: always
+    networks:
+      - production-network
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          memory: 2G
+          cpus: '2.0'
+        reservations:
+          memory: 1G
+          cpus: '1.0'
+
+  # PyTorch TTS with GPU - Primary
+  pytorch-tts-gpu:
+    build:
+      context: ./pytorch-tts-server
+      dockerfile: Dockerfile.gpu
+      args:
+        TORCH_INDEX_URL: https://download.pytorch.org/whl/cu118
+    container_name: pytorch-tts-gpu-primary
+    ports:
+      - "8000:8000"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - LOG_LEVEL=warning
+      - PYTHONUNBUFFERED=1
+      # GPU Configuration
+      - CUDA_VISIBLE_DEVICES=0
+      - PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:4096
+      # Use full Bark models with GPU
+      - SUNO_USE_SMALL_MODELS=false
+      - SUNO_OFFLOAD_CPU=false
+      # Cache configuration
+      - TRANSFORMERS_CACHE=/app/cache
+      - HF_HOME=/app/models
+      # Preload models for faster first request
+      - PRELOAD_MODELS=suno/bark
+    volumes:
+      - pytorch_models_prod:/app/models
+      - pytorch_cache_prod:/app/cache
+      - ./pytorch-tts-server/voices:/app/voices:ro
+    restart: always
+    networks:
+      - production-network
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+        limits:
+          memory: 12G
+        reservations:
+          memory: 8G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 180s
+
+  # PyTorch TTS with CPU - Fallback
+  pytorch-tts-cpu:
+    build:
+      context: ./pytorch-tts-server
+      dockerfile: Dockerfile
+    container_name: pytorch-tts-cpu-fallback
+    ports:
+      - "8001:8000"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - LOG_LEVEL=warning
+      - PYTHONUNBUFFERED=1
+      # Use small models for CPU
+      - SUNO_USE_SMALL_MODELS=true
+      - SUNO_OFFLOAD_CPU=true
+      # CPU optimizations
+      - OMP_NUM_THREADS=8
+      - MKL_NUM_THREADS=8
+      # Cache configuration
+      - TRANSFORMERS_CACHE=/app/cache
+      - HF_HOME=/app/models
+    volumes:
+      - pytorch_models_prod:/app/models
+      - pytorch_cache_prod:/app/cache
+      - ./pytorch-tts-server/voices:/app/voices:ro
+    restart: always
+    networks:
+      - production-network
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+          cpus: '8.0'
+        reservations:
+          memory: 4G
+          cpus: '4.0'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 240s
+
+  # Whisper ASR with GPU
+  whisper-asr-gpu:
+    build:
+      context: ./whisper-asr-server
+      dockerfile: Dockerfile
+    container_name: whisper-asr-gpu-prod
+    ports:
+      - "9000:9000"
+    environment:
+      - PORT=9000
+      - HOST=0.0.0.0
+      - LOG_LEVEL=warning
+      # Use large model for best accuracy
+      - PRELOAD_MODEL=large-v3
+      - CUDA_VISIBLE_DEVICES=1
+    volumes:
+      - whisper_cache_prod:/root/.cache/whisper
+    restart: always
+    networks:
+      - production-network
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+        limits:
+          memory: 8G
+        reservations:
+          memory: 4G
+
+  # NGINX Load Balancer
+  nginx-lb:
+    image: nginx:alpine
+    container_name: nginx-load-balancer
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - nginx_cache:/var/cache/nginx
+    depends_on:
+      - subway-surfers-app
+      - pytorch-tts-gpu
+      - pytorch-tts-cpu
+    restart: always
+    networks:
+      - production-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.0'
+        reservations:
+          memory: 256M
+          cpus: '0.5'
+
+  # Redis Cache for production
+  redis:
+    image: redis:7-alpine
+    container_name: redis-cache-prod
+    command: redis-server --maxmemory 2gb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data_prod:/data
+    restart: always
+    networks:
+      - production-network
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+
+  # Monitoring with Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus-prod
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data_prod:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+    restart: always
+    networks:
+      - production-network
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+
+  # Grafana for visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana-prod
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_INSTALL_PLUGINS=redis-datasource
+    volumes:
+      - grafana_data_prod:/var/lib/grafana
+      - ./monitoring/grafana:/etc/grafana/provisioning:ro
+    restart: always
+    networks:
+      - production-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+
+networks:
+  production-network:
+    driver: bridge
+    name: subway-production
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+volumes:
+  # Production volumes with proper drivers
+  production_videos:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/storage/subway-videos
+  production_models:
+    driver: local
+  pytorch_models_prod:
+    driver: local
+  pytorch_cache_prod:
+    driver: local
+  whisper_cache_prod:
+    driver: local
+  redis_data_prod:
+    driver: local
+  prometheus_data_prod:
+    driver: local
+  grafana_data_prod:
+    driver: local
+  nginx_cache:
+    driver: local

@@ -16,8 +16,9 @@ RUN apt-get update && apt-get install -y \
     libffi-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Set environment variables for WhisperASR integration
-ENV WHISPER_ASR_URL=http://host.docker.internal:9000
+# Set environment variables for service integration
+ENV WHISPER_ASR_URL=http://whisper-asr:9000
+ENV PYTORCH_TTS_ENDPOINT=http://pytorch-tts:8000
 ENV FLASK_APP=app.py
 ENV DOCKER_ENV=true
 

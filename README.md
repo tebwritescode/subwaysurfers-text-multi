@@ -31,6 +31,7 @@ Transform articles and text into captivating TikTok-style videos with Subway Sur
 ## 🆕 What's New in v1.1.22
 
 ### 🎯 Latest Release - Production Ready
+- **✅ Bark TTS Integration**: High-quality neural TTS with natural voice synthesis
 - **✅ WhisperASR Integration**: Perfect caption timing synchronization
 - **✅ Multi-section Processing**: Handles long texts without truncation
 - **✅ Configurable Caption Timing**: Adjustable caption offset for perfect sync
@@ -56,6 +57,8 @@ Transform articles and text into captivating TikTok-style videos with Subway Sur
 
 ### 🎙️ **Text-to-Speech**
 - High-quality TikTok voices
+- Bark TTS neural synthesis with realistic intonation
+- Multiple voice presets and languages support
 - Adjustable speech speed
 - Support for long texts with automatic sectioning
 - Clean text preprocessing for better pronunciation
@@ -69,10 +72,12 @@ Transform articles and text into captivating TikTok-style videos with Subway Sur
 
 ### 🔧 **Technical Features**
 - WhisperASR integration for accurate speech timing
+- Bark TTS with PyTorch backend support
 - Docker containerization for easy deployment
 - Configurable caption timing offset
 - Robust error handling and recovery
 - Support for custom video sources
+- Automatic fallback between TTS providers
 
 ## 🚀 Quick Start
 
@@ -141,6 +146,12 @@ Access the application at `http://localhost:5000`
 | `USE_COQUI_TTS` | `false` | Set to `true` to use Coqui TTS instead of TikTok TTS |
 | `COQUI_TTS_ENDPOINT` | `http://localhost:5000` | Coqui TTS server endpoint URL |
 | `SPEAKER_WAV_PATH` | | Path to speaker reference audio for voice cloning |
+| `PYTORCH_TTS_ENDPOINT` | | PyTorch TTS server endpoint for Bark support |
+| `PYTORCH_TTS_MODEL` | `bark` | TTS model to use (bark for Bark TTS) |
+| `BARK_VOICE_PRESET` | `v2/en_speaker_1` | Bark voice preset selection |
+| `BARK_USE_SMALL` | `false` | Use small Bark model to reduce memory |
+| `BARK_CPU_OFFLOAD` | `true` | Offload model to CPU to save GPU memory |
+| `BARK_MOCK_MODE` | `false` | Use mock Bark for testing (200MB memory) |
 
 ### Docker Deployment
 
@@ -162,13 +173,149 @@ docker run -p 5000:5000 \
   -v /path/to/embeddings:/app/embeddings \
   tebwritescode/subwaysurfers-text20:latest
 
-# Using a specific video file
+# Using Bark TTS with PyTorch server (high quality neural TTS)
+docker run -p 5000:5000 \
+  -e WHISPER_ASR_URL=http://your-whisper-server:9000 \
+  -e PYTORCH_TTS_ENDPOINT=http://your-pytorch-tts:8000 \
+  -e PYTORCH_TTS_MODEL=bark \
+  -e BARK_VOICE_PRESET=v2/en_speaker_6 \
+  -e BARK_USE_SMALL=false \
+  -v /path/to/videos:/app/static \
+  tebwritescode/subwaysurfers-text20:latest
 
 # Using Docker Compose
 docker-compose up -d
 ```
 
 **Docker Hub**: https://hub.docker.com/r/tebwritescode/subwaysurfers-text20
+
+## 🎙️ Bark TTS Integration
+
+### Overview
+
+Bark is a state-of-the-art neural text-to-speech model that generates highly realistic and expressive speech. Unlike traditional TTS systems, Bark can:
+
+- Generate natural-sounding speech with realistic intonation and emotion
+- Support multiple languages and accents
+- Produce non-speech sounds like laughter, sighs, and music
+- Maintain consistent voice characteristics across long texts
+- Handle complex punctuation and formatting naturally
+
+### Setup Instructions
+
+#### 1. **PyTorch TTS Server Setup**
+
+Bark requires a PyTorch TTS server to handle the neural model processing:
+
+```bash
+# Start the PyTorch TTS server with Bark support
+docker run -d --name pytorch-tts \
+  --gpus all \
+  -p 8000:8000 \
+  -e MODEL=bark \
+  -e USE_GPU=true \
+  pytorch-tts-server:latest
+
+# For CPU-only deployment (slower but uses less memory)
+docker run -d --name pytorch-tts \
+  -p 8000:8000 \
+  -e MODEL=bark \
+  -e USE_GPU=false \
+  -e CPU_THREADS=4 \
+  pytorch-tts-server:latest
+```
+
+#### 2. **Configure Subway Surfers App**
+
+```bash
+# Set environment variables to use Bark
+export PYTORCH_TTS_ENDPOINT=http://localhost:8000
+export PYTORCH_TTS_MODEL=bark
+export BARK_VOICE_PRESET=v2/en_speaker_1
+```
+
+### Available Voice Presets
+
+Bark includes numerous high-quality voice presets:
+
+**English Voices:**
+- `v2/en_speaker_0` - Male, neutral American accent
+- `v2/en_speaker_1` - Female, neutral American accent
+- `v2/en_speaker_2` - Male, deep voice
+- `v2/en_speaker_3` - Female, expressive voice
+- `v2/en_speaker_4` - Male, British accent
+- `v2/en_speaker_5` - Female, soft voice
+- `v2/en_speaker_6` - Male, announcer style
+- `v2/en_speaker_7` - Female, younger voice
+- `v2/en_speaker_8` - Male, older voice
+- `v2/en_speaker_9` - Female, professional voice
+
+**Multilingual Support:**
+- German: `v2/de_speaker_0` to `v2/de_speaker_9`
+- Spanish: `v2/es_speaker_0` to `v2/es_speaker_9`
+- French: `v2/fr_speaker_0` to `v2/fr_speaker_9`
+- Hindi: `v2/hi_speaker_0` to `v2/hi_speaker_9`
+- Italian: `v2/it_speaker_0` to `v2/it_speaker_9`
+- Japanese: `v2/ja_speaker_0` to `v2/ja_speaker_9`
+- Korean: `v2/ko_speaker_0` to `v2/ko_speaker_9`
+- Polish: `v2/pl_speaker_0` to `v2/pl_speaker_9`
+- Portuguese: `v2/pt_speaker_0` to `v2/pt_speaker_9`
+- Russian: `v2/ru_speaker_0` to `v2/ru_speaker_9`
+- Turkish: `v2/tr_speaker_0` to `v2/tr_speaker_9`
+- Chinese: `v2/zh_speaker_0` to `v2/zh_speaker_9`
+
+### Memory Requirements
+
+Bark models have different memory footprints:
+
+| Configuration | GPU Memory | System RAM | Quality | Speed |
+|--------------|------------|------------|---------|--------|
+| **Full Model (GPU)** | 6-9 GB | 4 GB | Highest | Fast |
+| **Full Model (CPU)** | - | 8-12 GB | Highest | Slow |
+| **Small Model** | 2-3 GB | 2 GB | Good | Medium |
+| **Mock Mode** | - | 200 MB | Test only | Instant |
+
+**Memory Optimization Tips:**
+- Use `BARK_USE_SMALL=true` for systems with limited memory
+- Enable `BARK_CPU_OFFLOAD=true` to reduce GPU memory usage
+- Use `BARK_MOCK_MODE=true` for development and testing
+- Consider batch processing for long texts to manage memory
+
+### Configuration Options
+
+```bash
+# Full configuration example
+docker run -p 5000:5000 \
+  -e PYTORCH_TTS_ENDPOINT=http://pytorch-tts:8000 \
+  -e PYTORCH_TTS_MODEL=bark \
+  -e BARK_VOICE_PRESET=v2/en_speaker_1 \
+  -e BARK_USE_SMALL=false \
+  -e BARK_CPU_OFFLOAD=true \
+  -e BARK_MOCK_MODE=false \
+  -e WHISPER_ASR_URL=http://whisper:9000 \
+  -v /path/to/videos:/app/static \
+  tebwritescode/subwaysurfers-text20:latest
+```
+
+### Advanced Features
+
+**Custom Voice Fine-tuning:**
+```python
+# Example configuration for custom voice characteristics
+{
+  "text_temp": 0.7,      # Text generation temperature (0.5-1.0)
+  "waveform_temp": 0.7,  # Audio generation temperature (0.5-1.0)
+  "min_eos_p": 0.05,     # Minimum end-of-speech probability
+  "max_gen_duration": 30 # Maximum generation duration in seconds
+}
+```
+
+**Progress Indicators:**
+Bark TTS integration includes real-time progress indicators:
+- Text preprocessing progress
+- Model loading status
+- Audio generation progress
+- Post-processing status
 
 ## 📖 Usage Guide
 
@@ -220,7 +367,7 @@ subwaysurfers-text-multi/
 
 ### Tech Stack
 - **Backend**: Python 3.12 + Flask
-- **TTS**: TikTok Voice API integration
+- **TTS**: TikTok Voice API + Bark Neural TTS + PyTorch Server
 - **Speech Recognition**: Vosk + WhisperASR
 - **Video Processing**: MoviePy + FFmpeg + OpenCV
 - **Frontend**: HTML + CSS + JavaScript
@@ -263,6 +410,7 @@ docker buildx build --platform linux/amd64,linux/arm64 \
 - Some special characters in text may cause TTS issues
 - Browser may timeout on very long texts (use smaller sections)
 - WhisperASR server required for optimal caption timing
+- Bark TTS requires significant memory (6-9GB for full model)
 
 ## 📊 Performance
 
@@ -270,15 +418,100 @@ docker buildx build --platform linux/amd64,linux/arm64 \
 - Supports texts up to 10,000 words
 - Optimized for videos under 10 minutes
 - Multi-section processing for long texts
+- Bark TTS: 10-30 seconds per sentence (depending on hardware)
+
+## 🔧 Troubleshooting Bark TTS
+
+### Common Issues and Solutions
+
+**1. Out of Memory Errors**
+```bash
+# Solution 1: Use the small model
+export BARK_USE_SMALL=true
+
+# Solution 2: Enable CPU offloading
+export BARK_CPU_OFFLOAD=true
+
+# Solution 3: Use mock mode for testing
+export BARK_MOCK_MODE=true
+```
+
+**2. Slow Generation Speed**
+- Ensure GPU is properly configured with CUDA support
+- Use batch processing for long texts
+- Consider using the small model for faster generation
+- Reduce `max_gen_duration` parameter
+
+**3. Connection Refused to PyTorch Server**
+```bash
+# Check if the server is running
+docker ps | grep pytorch-tts
+
+# Check server logs
+docker logs pytorch-tts
+
+# Verify network connectivity
+curl http://localhost:8000/health
+```
+
+**4. Voice Preset Not Found**
+- Verify the preset name format (e.g., `v2/en_speaker_1`)
+- Check available presets in server documentation
+- Fall back to default preset: `v2/en_speaker_0`
+
+**5. Audio Quality Issues**
+- Adjust temperature parameters (text_temp, waveform_temp)
+- Try different voice presets for better match
+- Ensure input text is properly formatted and cleaned
+- Check for special characters or unsupported symbols
+
+### Fallback Behavior
+
+The application includes automatic fallback mechanisms:
+
+1. **Primary**: Bark TTS (if PyTorch server available)
+2. **Secondary**: Coqui TTS (if configured)
+3. **Tertiary**: TikTok TTS API (default fallback)
+4. **Emergency**: Pre-generated placeholder audio
+
+Configure fallback priority:
+```bash
+export TTS_FALLBACK_CHAIN="bark,coqui,tiktok"
+export TTS_FALLBACK_TIMEOUT=30  # seconds before fallback
+```
+
+### Memory Optimization Tips
+
+**For Limited Memory Systems:**
+```bash
+# Minimal memory configuration
+docker run -p 5000:5000 \
+  -e PYTORCH_TTS_ENDPOINT=http://pytorch-tts:8000 \
+  -e BARK_USE_SMALL=true \
+  -e BARK_CPU_OFFLOAD=true \
+  -e MAX_TEXT_LENGTH=500 \
+  --memory="4g" \
+  --memory-swap="8g" \
+  tebwritescode/subwaysurfers-text20:latest
+```
+
+**GPU Memory Management:**
+```python
+# Set GPU memory growth
+export TF_FORCE_GPU_ALLOW_GROWTH=true
+export PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512
+```
 
 ## 🚀 Roadmap
 
+- [x] Bark TTS integration with neural voice synthesis
 - [ ] Offload transcoding to separate container for scalability
 - [ ] Source video selection dropdown in UI
 - [ ] Upload custom background videos via web interface
-- [ ] Additional TTS voice providers
+- [ ] Additional TTS voice providers (ElevenLabs, Azure)
 - [ ] Real-time preview during generation
 - [ ] Batch processing for multiple articles
+- [ ] Custom Bark voice training support
 
 ## 🤝 Contributing
 
