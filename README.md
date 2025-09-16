@@ -74,6 +74,9 @@ Transform articles and text into captivating TikTok-style videos with Subway Sur
 - Robust error handling and recovery
 - Support for custom video sources
 
+### **Planned Features**
+- Add support for ElevenLabs API
+
 ## 🚀 Quick Start
 
 ### Prerequisites
