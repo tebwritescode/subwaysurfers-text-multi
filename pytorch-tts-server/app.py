@@ -12,16 +12,34 @@ from pathlib import Path
 from typing import Optional, Dict, List, Any
 import logging
 
-import torch
-import torchaudio
-import soundfile as sf
+import numpy as np
+
+# Lazy imports for heavy libraries
+torch = None
+torchaudio = None
+sf = None
+transformers = None
+
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel
 import uvicorn
-from transformers import pipeline, SpeechT5Processor, SpeechT5ForTextToSpeech, SpeechT5HifiGan
-from transformers import VitsModel, VitsTokenizer
-import numpy as np
+
+def lazy_import():
+    """Lazy import heavy libraries"""
+    global torch, torchaudio, sf, transformers
+    if torch is None:
+        import torch as _torch
+        torch = _torch
+    if torchaudio is None:
+        import torchaudio as _torchaudio
+        torchaudio = _torchaudio
+    if sf is None:
+        import soundfile as _sf
+        sf = _sf
+    if transformers is None:
+        import transformers as _transformers
+        transformers = _transformers
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -36,8 +54,16 @@ app = FastAPI(
 
 # Global model cache
 model_cache = {}
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-logger.info(f"Using device: {device}")
+device = None
+
+def get_device():
+    """Get compute device lazily"""
+    global device
+    if device is None:
+        lazy_import()
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        logger.info(f"Using device: {device}")
+    return device
 
 class TTSRequest(BaseModel):
     text: str
@@ -81,14 +107,18 @@ def load_model(model_name: str):
     """Load and cache a TTS model"""
     if model_name in model_cache:
         return model_cache[model_name]
-    
+
+    # Ensure libraries are imported
+    lazy_import()
+    device = get_device()
+
     logger.info(f"Loading model: {model_name}")
     
     try:
         if model_name not in SUPPORTED_MODELS:
             # Try generic transformers pipeline
             model_data = {
-                "pipeline": pipeline("text-to-speech", model=model_name, device=device),
+                "pipeline": transformers.pipeline("text-to-speech", model=model_name, device=device),
                 "type": "pipeline"
             }
         else:
@@ -105,10 +135,8 @@ def load_model(model_name: str):
                 if not torch.cuda.is_available() or torch.cuda.get_device_properties(0).total_memory < 8e9:
                     os.environ["SUNO_OFFLOAD_CPU"] = "True"
                 
-                from transformers import AutoProcessor, BarkModel
-                
-                processor = AutoProcessor.from_pretrained(model_name)
-                model = BarkModel.from_pretrained(model_name).to(device)
+                processor = transformers.AutoProcessor.from_pretrained(model_name)
+                model = transformers.BarkModel.from_pretrained(model_name).to(device)
                 
                 model_data.update({
                     "processor": processor,
@@ -116,9 +144,9 @@ def load_model(model_name: str):
                 })
                 
             elif model_config["type"] == "speecht5":
-                processor = SpeechT5Processor.from_pretrained(model_name)
-                model = SpeechT5ForTextToSpeech.from_pretrained(model_name).to(device)
-                vocoder = SpeechT5HifiGan.from_pretrained(model_config["vocoder"]).to(device)
+                processor = transformers.SpeechT5Processor.from_pretrained(model_name)
+                model = transformers.SpeechT5ForTextToSpeech.from_pretrained(model_name).to(device)
+                vocoder = transformers.SpeechT5HifiGan.from_pretrained(model_config["vocoder"]).to(device)
                 
                 model_data.update({
                     "processor": processor,
@@ -132,14 +160,16 @@ def load_model(model_name: str):
         
     except Exception as e:
         logger.error(f"Failed to load model {model_name}: {str(e)}")
-        raise HTTPException(status_code=500, f"Failed to load model: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to load model: {str(e)}")
 
 def synthesize_speecht5(model_data: Dict, text: str, voice: str = "default") -> np.ndarray:
     """Synthesize speech using SpeechT5 model"""
+    lazy_import()
+    device = get_device()
     processor = model_data["processor"]
     model = model_data["model"]
     vocoder = model_data["vocoder"]
-    
+
     inputs = processor(text=text, return_tensors="pt").to(device)
     
     # Load speaker embeddings (you would customize this for different voices)
@@ -152,9 +182,11 @@ def synthesize_speecht5(model_data: Dict, text: str, voice: str = "default") -> 
 
 def synthesize_vits(model_data: Dict, text: str, language: str = "en") -> np.ndarray:
     """Synthesize speech using VITS model"""
+    lazy_import()
+    device = get_device()
     model = model_data["model"]
     tokenizer = model_data["tokenizer"]
-    
+
     inputs = tokenizer(text, return_tensors="pt").to(device)
     
     with torch.no_grad():
@@ -165,6 +197,8 @@ def synthesize_vits(model_data: Dict, text: str, language: str = "en") -> np.nda
 
 def synthesize_bark(model_data: Dict, text: str, voice: str = "narrator") -> tuple[np.ndarray, int]:
     """Synthesize speech using Bark model"""
+    lazy_import()
+    device = get_device()
     model = model_data["model"]
     processor = model_data["processor"]
     
@@ -219,7 +253,7 @@ def synthesize_bark(model_data: Dict, text: str, voice: str = "narrator") -> tup
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
-    return {"status": "healthy", "device": str(device)}
+    return {"status": "healthy", "device": str(get_device()) if device else "not_initialized"}
 
 @app.get("/voices")
 async def get_voices():
@@ -301,6 +335,7 @@ async def test_voices(voices: List[str] = None):
 async def synthesize_speech(request: TTSRequest):
     """Synthesize speech from text"""
     try:
+        lazy_import()  # Ensure imports are ready
         # Load model
         model_data = load_model(request.model)
         
@@ -340,6 +375,7 @@ async def synthesize_speech(request: TTSRequest):
 async def synthesize_speech_stream(request: TTSRequest):
     """Synthesize speech and return as audio stream"""
     try:
+        lazy_import()  # Ensure imports are ready
         model_data = load_model(request.model)
         
         if model_data["type"] == "speecht5":
