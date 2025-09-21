@@ -23,6 +23,7 @@ import json
 import time
 import threading
 import queue
+from elevenlabs_tts import get_elevenlabs_voices
 
 # Initialize Flask application
 app = Flask(__name__)
@@ -61,12 +62,37 @@ class ScriptExecutionError(Exception):
 FINAL_VIDEOS_DIR = "final_videos"
 os.makedirs(FINAL_VIDEOS_DIR, exist_ok=True)
 
+@app.route('/api/voices')
+def get_voices():
+    """
+    Return available ElevenLabs voices as JSON.
+    """
+    try:
+        voices_result = get_elevenlabs_voices()
+        if "error" in voices_result:
+            return {"voices": [], "error": voices_result["error"]}
+        return voices_result
+    except Exception as e:
+        return {"voices": [], "error": str(e)}
+
 @app.route('/')
 def home():
     """
     Render the home page with the input form.
     """
-    return render_template('index.html', version=__version__)
+    # Get ElevenLabs voices for the dropdown
+    try:
+        voices_result = get_elevenlabs_voices()
+        elevenlabs_voices = voices_result.get("voices", [])
+        elevenlabs_error = voices_result.get("error", None)
+    except Exception as e:
+        elevenlabs_voices = []
+        elevenlabs_error = str(e)
+
+    return render_template('index.html',
+                         version=__version__,
+                         elevenlabs_voices=elevenlabs_voices,
+                         elevenlabs_error=elevenlabs_error)
 
 @app.route('/progress/<session_id>')
 def progress_stream(session_id):
