@@ -8,7 +8,8 @@ import subprocess
 import ffmpeg
 import os
 import shutil
-import audioread
+# import audioread - removed for Python 3.13 compatibility
+from pydub import AudioSegment
 import time
 import random
 import logging
@@ -228,9 +229,10 @@ def script(input_text, customspeed, customvoice, final_path="final.mp4", progres
             # )
             aligned_words, aligned_timestamps = stt_words, stt_timestamps
             
-            # Get audio duration
+            # Get audio duration using pydub instead of audioread (Python 3.13 compatibility)
             try:
-                sound_duration = int(audioread.audio_open(section_fast_wav).duration)
+                audio = AudioSegment.from_wav(section_fast_wav)
+                sound_duration = int(len(audio) / 1000)  # Convert milliseconds to seconds
             except Exception as e:
                 return {"error": f"Failed to determine audio duration for section {section_num}: {str(e)}"}
 
@@ -281,12 +283,12 @@ def script(input_text, customspeed, customvoice, final_path="final.mp4", progres
             if word_count < 10:
                 raise ValueError(f"Cleaned text must contain at least 10 words (found {word_count})")
 
-        update_progress(4, "validation", "Checking Vosk model...")
+        update_progress(4, "validation", "Using ElevenLabs TTS...")
 
-        # Check if VOSK model exists
-        model_check = verify_vosk_model()
-        if "error" in model_check:
-            return model_check
+        # Skip Vosk model check since we're using ElevenLabs TTS
+        # model_check = verify_vosk_model()
+        # if "error" in model_check:
+        #     return model_check
 
         update_progress(6, "setup", "Analyzing text length and planning sections...")
 
