@@ -1,5 +1,5 @@
-# Use official Python image as the base
-FROM python:3.12-slim
+# Use official Python image as the base (3.13 for latest compatibility)
+FROM python:3.13-slim
 
 # Set the working directory inside the container
 WORKDIR /app
@@ -16,10 +16,10 @@ RUN apt-get update && apt-get install -y \
     libffi-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Set environment variables for WhisperASR integration
-ENV WHISPER_ASR_URL=http://host.docker.internal:9000
+# Set environment variables for ElevenLabs integration
 ENV FLASK_APP=app.py
 ENV DOCKER_ENV=true
+# ELEVENLABS_API_KEY should be passed at runtime via docker run -e
 
 # Copy necessary files to /app
 COPY . /app
