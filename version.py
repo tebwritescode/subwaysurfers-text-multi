@@ -5,7 +5,7 @@
 # - MINOR: Features being added
 # - PATCH: Steps during troubleshooting, testing and modifications
 
-__version__ = "1.1.22"
+__version__ = "1.2.0"
 
 # Version history:
 # 1.0.0 - Initial versioning system implementation (based on Docker image v20)
@@ -35,3 +35,4 @@ __version__ = "1.1.22"
 # 1.1.20 - FIXED: Updated CodeQL workflow to use v3 (v2 deprecated), resolved SARIF processing issues
 # 1.1.21 - FEATURE: Added support for MODEL_PATH and SOURCE_VIDEO_DIR env vars. SOURCE_VIDEO_DIR now accepts both files and directories
 # 1.1.22 - CLEANUP: Sanitized codebase - removed test outputs, unused scripts, and temporary files
+# 1.2.0 - MAJOR: Replaced TikTok TTS with ElevenLabs API integration, added Python 3.13 compatibility
