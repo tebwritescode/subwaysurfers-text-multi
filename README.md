@@ -116,3 +116,5 @@ Mount your video files to `/app/static` to make them available to the applicatio
 - Offloading transcoding to a separate container to allow transcoding on a different server
 - Dropdown to select source video
 - Allow uploading source videos from web client
+- ElevenLabs TTS integration for premium voice synthesis
+- ONNX voice support for local high-quality TTS
