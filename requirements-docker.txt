@@ -1,6 +1,6 @@
 # Web framework
 Flask==3.0.3
-Werkzeug==3.0.2
+Werkzeug==3.0.6
 Jinja2==3.1.3
 MarkupSafe==2.1.5
 click==8.1.7
@@ -21,7 +21,7 @@ audioop-lts==0.2.2
 
 # Article extraction from URLs
 goose3==3.1.19
-lxml==5.3.0
+lxml==6.1.0
 beautifulsoup4==4.12.3
 cssselect==1.2.0
 soupsieve==2.5
