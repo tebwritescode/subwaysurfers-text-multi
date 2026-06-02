@@ -16,10 +16,11 @@
             border: 1px solid #fed7d7;
             border-radius: 4px;
         }
+        .backend-selection { margin-bottom: 12px; }
     </style>
 </head>
 <body id="indexbody" class="body">
-<div class="menu-bar">
+    <div class="menu-bar">
         <a href="{{ url_for('home') }}">Generate</a>
         <a href="{{ url_for('videos') }}">Browse</a>
     </div>
@@ -45,27 +46,32 @@
     {% endwith %}
     <form id="textform" action="/submit-form" method="post">
         <textarea id="text_input" name="text_input" placeholder="Enter Article Link or Text"></textarea>
-        
+
+        <div class="backend-selection">
+            <label for="backend">TTS Backend:</label>
+            <select id="backend" name="backend">
+                {% for backend in backends %}
+                    <option value="{{ backend.id }}" {% if backend.is_default %}selected{% endif %}>{{ backend.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
         <div class="voice-selection">
             <label for="voice">Select Voice:</label>
-            {% if elevenlabs_error %}
-                <div class="voice-error">⚠️ {{ elevenlabs_error }}</div>
-                <select id="voice" name="voice">
-                    <option value="default">Default Voice (API not configured)</option>
-                </select>
-            {% else %}
-                <select id="voice" name="voice">
-                    {% if elevenlabs_voices %}
-                        {% for voice in elevenlabs_voices %}
-                            <option value="{{ voice.id }}">{{ voice.name }}</option>
-                        {% endfor %}
-                    {% else %}
-                        <option value="default">Loading voices...</option>
-                    {% endif %}
-                </select>
-            {% endif %}
+            <div class="voice-error" id="voice-error" style="{% if not voices_error %}display:none;{% endif %}">
+                {% if voices_error %}⚠️ {{ voices_error }}{% endif %}
+            </div>
+            <select id="voice" name="voice">
+                {% if voices %}
+                    {% for voice in voices %}
+                        <option value="{{ voice.id }}">{{ voice.name }}</option>
+                    {% endfor %}
+                {% else %}
+                    <option value="default">Default Voice</option>
+                {% endif %}
+            </select>
         </div>
-        
+
         <div class="speed-control">
             <label for="speed_slider">Playback Speed: <span id="speed_value">1.0</span>x</label>
             <input type="range" id="speed_slider" name="speed" min="0.25" max="3" step="0.05" value="1.0">
@@ -74,10 +80,10 @@
         <div id="loading-message" class="flash-message success" style="display: none;">
             Creating video... Please wait.
         </div>
-        
+
         <button type="submit" id="submit-btn">Submit</button>
     </form>
-    
+
     <script>
         const speedSlider = document.getElementById('speed_slider');
         const speedValue = document.getElementById('speed_value');
@@ -86,72 +92,64 @@
         const progressContainer = document.getElementById('progress-container');
         const progressBar = document.getElementById('progress-bar');
         const progressStatus = document.getElementById('progress-status');
-        const steps = [
-            {id: "step-extract", label: "Extracting Text"},
-            {id: "step-audio", label: "Generating Audio"},
-            {id: "step-merge", label: "Merging Video & Audio"}
-        ];
+        const backendSelect = document.getElementById('backend');
+        const voiceSelect = document.getElementById('voice');
+        const voiceError = document.getElementById('voice-error');
 
-        speedSlider.addEventListener('input', function() {
+        speedSlider.addEventListener('input', function () {
             speedValue.textContent = this.value;
         });
 
-        function setStepActive(stepIdx) {
-            steps.forEach((step, idx) => {
-                const el = document.getElementById(step.id);
-                el.classList.remove('active', 'done');
-                if (idx < stepIdx) el.classList.add('done');
-                else if (idx === stepIdx) el.classList.add('active');
-            });
+        // Reload the voice list whenever the backend changes.
+        async function loadVoices(backend) {
+            voiceSelect.disabled = true;
+            voiceSelect.innerHTML = '<option value="default">Loading voices...</option>';
+            voiceError.style.display = 'none';
+            try {
+                const resp = await fetch(`/api/voices?backend=${encodeURIComponent(backend)}`);
+                const data = await resp.json();
+                voiceSelect.innerHTML = '';
+                if (data.voices && data.voices.length) {
+                    for (const v of data.voices) {
+                        const opt = document.createElement('option');
+                        opt.value = v.id;
+                        opt.textContent = v.name;
+                        voiceSelect.appendChild(opt);
+                    }
+                } else {
+                    const opt = document.createElement('option');
+                    opt.value = 'default';
+                    opt.textContent = 'Default Voice';
+                    voiceSelect.appendChild(opt);
+                }
+                if (data.error) {
+                    voiceError.textContent = '⚠️ ' + data.error;
+                    voiceError.style.display = 'block';
+                }
+            } catch (e) {
+                voiceError.textContent = '⚠️ Failed to load voices: ' + e;
+                voiceError.style.display = 'block';
+            } finally {
+                voiceSelect.disabled = false;
+            }
         }
 
-        document.getElementById('textform').addEventListener('submit', function() {
+        backendSelect.addEventListener('change', () => loadVoices(backendSelect.value));
+
+        document.getElementById('textform').addEventListener('submit', function () {
             loadingMessage.style.display = "block";
             submitButton.disabled = true;
             progressContainer.style.display = "flex";
             progressBar.style.width = "0%";
-            setStepActive(0);
-            progressStatus.textContent = "Extracting text from input...";
-            let progress = 0;
-            let step = 0;
-            let stepProgress = [0, 0, 0];
-            let interval = setInterval(() => {
-                if (step === 0) {
-                    progress += Math.random() * 10 + 10;
-                    if (progress >= 33) {
-                        progress = 33;
-                        setStepActive(1);
-                        progressStatus.textContent = "Generating audio...";
-                        step = 1;
-                    }
-                } else if (step === 1) {
-                    progress += Math.random() * 10 + 10;
-                    if (progress >= 66) {
-                        progress = 66;
-                        setStepActive(2);
-                        progressStatus.textContent = "Merging video and audio...";
-                        step = 2;
-                    }
-                } else if (step === 2) {
-                    progress += Math.random() * 7 + 5;
-                    if (progress >= 90) {
-                        progress = 90;
-                        progressStatus.textContent = "Finalizing...";
-                        clearInterval(interval);
-                    }
-                }
-                progressBar.style.width = progress + "%";
-            }, 600);
-            window.fakeProgressInterval = interval;
+            progressStatus.textContent = "Starting...";
         });
 
-        window.onload = function() {
+        window.onload = function () {
             const errorMessages = document.querySelectorAll('.flash-message.error');
             if (errorMessages.length > 0) {
                 submitButton.disabled = false;
                 loadingMessage.style.display = "none";
                 progressContainer.style.display = "none";
-                if (window.fakeProgressInterval) clearInterval(window.fakeProgressInterval);
             }
         };
     </script>

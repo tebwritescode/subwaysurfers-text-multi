@@ -1,256 +1,164 @@
 """
-ElevenLabs Text-to-Speech Implementation
-Replaces TikTok TTS functionality with ElevenLabs API
+ElevenLabs text-to-speech backend.
+
+Talks to the ElevenLabs HTTP API directly (no SDK dependency). Requires the
+ELEVENLABS_API_KEY environment variable. Receives already-extracted plain text
+(URL handling happens upstream in content.py).
 """
 
+import logging
 import os
-import requests
-import validators
-from dotenv import load_dotenv
-from goose3 import Goose
-from cleantext import cleantext
 
-# Load environment variables
+import requests
+from dotenv import load_dotenv
+
 load_dotenv()
 
-def get_elevenlabs_voices():
+logger = logging.getLogger(__name__)
+
+API_BASE = "https://api.elevenlabs.io/v1"
+# A widely-available stock voice used when no specific voice is selected.
+DEFAULT_VOICE_ID = "21m00Tcm4TlvDq8ikWAM"
+MODEL_ID = "eleven_monolingual_v1"
+MAX_CHUNK_CHARS = 2000  # Conservative per-request character limit.
+
+
+def _api_key():
+    key = os.getenv("ELEVENLABS_API_KEY")
+    if key and key != "your_elevenlabs_api_key_here":
+        return key
+    return None
+
+
+def list_elevenlabs_voices():
     """
-    Get list of available voices from ElevenLabs API using the official client.
+    List the voices available to the configured ElevenLabs account.
 
     Returns:
-        dict: {"voices": [...], "error": "..."}
+        dict: {"voices": [{"id", "name", "category"}, ...]} or {"error": "..."}.
     """
-    api_key = os.getenv('ELEVENLABS_API_KEY')
+    api_key = _api_key()
     if not api_key:
         return {"error": "ElevenLabs API key not configured"}
 
     try:
-        from elevenlabs import ElevenLabs
+        response = requests.get(
+            f"{API_BASE}/voices",
+            headers={"Accept": "application/json", "xi-api-key": api_key},
+            timeout=15,
+        )
+    except requests.RequestException as exc:
+        return {"error": f"Failed to reach ElevenLabs: {exc}"}
 
-        client = ElevenLabs(api_key=api_key)
+    if response.status_code != 200:
+        return {"error": f"ElevenLabs API error: {response.status_code} - {response.text}"}
 
-        # Get voices using the official client
-        voices_response = client.voices.get_all()
+    voices = [
+        {
+            "id": voice["voice_id"],
+            "name": voice["name"],
+            "category": voice.get("category", "unknown"),
+        }
+        for voice in response.json().get("voices", [])
+    ]
+    return {"voices": voices}
 
-        voices = []
-        for voice in voices_response.voices:
-            voices.append({
-                'id': voice.voice_id,
-                'name': voice.name,
-                'category': voice.category if hasattr(voice, 'category') else 'unknown'
-            })
 
-        return {"voices": voices}
+# Backwards-compatible alias (older callers used this name).
+get_elevenlabs_voices = list_elevenlabs_voices
 
-    except Exception as e:
-        # Fallback to direct API call if client doesn't work
-        try:
-            headers = {
-                "Accept": "application/json",
-                "xi-api-key": api_key
-            }
 
-            response = requests.get("https://api.elevenlabs.io/v1/voices", headers=headers, timeout=10)
+def _resolve_voice_id(voice):
+    """Return a usable ElevenLabs voice id, falling back to a sensible default."""
+    if voice and voice != "default":
+        return voice
+    result = list_elevenlabs_voices()
+    if result.get("voices"):
+        return result["voices"][0]["id"]
+    return DEFAULT_VOICE_ID
 
-            if response.status_code == 200:
-                data = response.json()
-                voices = []
-                for voice in data.get('voices', []):
-                    voices.append({
-                        'id': voice['voice_id'],
-                        'name': voice['name'],
-                        'category': voice.get('category', 'unknown')
-                    })
-                return {"voices": voices}
-            else:
-                return {"error": f"ElevenLabs API error: {response.status_code} - {response.text}"}
 
-        except Exception as fallback_error:
-            return {"error": f"Failed to fetch voices: {str(e)} | Fallback error: {str(fallback_error)}"}
+def _chunk_text(text, limit=MAX_CHUNK_CHARS):
+    """Split ``text`` into <= ``limit`` character chunks on word boundaries."""
+    if len(text) <= limit:
+        return [text]
+    chunks, current = [], ""
+    for word in text.split():
+        if current and len(current) + len(word) + 1 > limit:
+            chunks.append(current)
+            current = word
+        else:
+            current = f"{current} {word}".strip()
+    if current:
+        chunks.append(current)
+    return chunks
 
-def generate_wav_elevenlabs(article, voice_id, output_file):
+
+def generate_wav_elevenlabs(text, voice, output_file):
     """
-    Generate a WAV audio file from text using ElevenLabs TTS API.
+    Synthesize ``text`` to a WAV file using ElevenLabs.
 
     Args:
-        article (str): Either a URL to an article or direct text content
-        voice_id (str): The ElevenLabs voice ID to use for synthesis
-        output_file (str): Path where the output WAV file will be saved
+        text (str): Plain text to narrate (already extracted/cleaned).
+        voice (str): ElevenLabs voice id (or "default" / falsy for a default).
+        output_file (str): Destination WAV path.
 
     Returns:
-        dict: {"error": "error message"} if failed, {} if successful
+        dict: {} on success, {"error": "..."} on failure.
     """
+    api_key = _api_key()
+    if not api_key:
+        return {"error": "ElevenLabs API key not configured. Set ELEVENLABS_API_KEY."}
+
+    text = (text or "").strip()
+    if not text:
+        return {"error": "No text content to process"}
+
+    voice_id = _resolve_voice_id(voice)
+    headers = {
+        "Accept": "audio/mpeg",
+        "Content-Type": "application/json",
+        "xi-api-key": api_key,
+    }
+
+    temp_files = []
     try:
-        # Check API key
-        api_key = os.getenv('ELEVENLABS_API_KEY')
-        if not api_key:
-            return {"error": "ElevenLabs API key not configured. Please set ELEVENLABS_API_KEY environment variable."}
-
-        g = Goose()
-        # Check if the input is a URL
-        if validators.url(article):
-            # If it's a URL, extract text using Goose
-            try:
-                extracted_article = g.extract(article)
-                text = extracted_article.cleaned_text
-                if not text or len(text.strip()) == 0:
-                    return {"error": "No text content could be extracted from the URL"}
-            except Exception as e:
-                return {"error": f"Failed to extract text from URL: {str(e)}"}
-        else:
-            # If it's not a URL, assume it's direct text
-            text = cleantext(article)
-
-        # Check text length
-        if len(text) == 0:
-            return {"error": "No text content to process"}
-
-        # ElevenLabs has a character limit per request (usually around 2500 characters)
-        # For longer texts, we'll need to split and concatenate
-        max_chunk_size = 2000  # Conservative limit
-
-        if len(text) > max_chunk_size:
-            # Split text into chunks
-            chunks = []
-            words = text.split()
-            current_chunk = ""
-
-            for word in words:
-                if len(current_chunk + " " + word) <= max_chunk_size:
-                    current_chunk += " " + word if current_chunk else word
-                else:
-                    if current_chunk:
-                        chunks.append(current_chunk.strip())
-                    current_chunk = word
-
-            if current_chunk:
-                chunks.append(current_chunk.strip())
-        else:
-            chunks = [text.strip()]
-
-        # Generate audio for each chunk
-        audio_segments = []
-
-        for i, chunk in enumerate(chunks):
+        for index, chunk in enumerate(_chunk_text(text)):
             if not chunk.strip():
                 continue
-
-            try:
-                headers = {
-                    "Accept": "audio/mpeg",
-                    "Content-Type": "application/json",
-                    "xi-api-key": api_key
-                }
-
-                data = {
+            response = requests.post(
+                f"{API_BASE}/text-to-speech/{voice_id}",
+                json={
                     "text": chunk,
-                    "model_id": "eleven_monolingual_v1",
-                    "voice_settings": {
-                        "stability": 0.5,
-                        "similarity_boost": 0.75
-                    }
-                }
+                    "model_id": MODEL_ID,
+                    "voice_settings": {"stability": 0.5, "similarity_boost": 0.75},
+                },
+                headers=headers,
+                timeout=60,
+            )
+            if response.status_code != 200:
+                return {"error": f"ElevenLabs API error: {response.status_code} - {response.text}"}
+            temp_path = f"temp_chunk_{index}.mp3"
+            with open(temp_path, "wb") as handle:
+                handle.write(response.content)
+            temp_files.append(temp_path)
 
-                response = requests.post(
-                    f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}",
-                    json=data,
-                    headers=headers,
-                    timeout=30
-                )
-
-                if response.status_code == 200:
-                    # Save this chunk as a temporary MP3 file
-                    temp_file = f"temp_chunk_{i}.mp3"
-                    with open(temp_file, 'wb') as f:
-                        f.write(response.content)
-                    audio_segments.append(temp_file)
-                else:
-                    # Clean up any temporary files
-                    for temp_file in audio_segments:
-                        if os.path.exists(temp_file):
-                            os.remove(temp_file)
-                    return {"error": f"ElevenLabs API error: {response.status_code} - {response.text}"}
-
-            except Exception as e:
-                # Clean up any temporary files
-                for temp_file in audio_segments:
-                    if os.path.exists(temp_file):
-                        os.remove(temp_file)
-                return {"error": f"Text-to-speech generation failed for chunk {i+1}: {str(e)}"}
-
-        if not audio_segments:
+        if not temp_files:
             return {"error": "No audio segments were generated"}
 
-        # Combine audio segments if multiple chunks
-        try:
-            # Handle Python 3.13 audioop removal
-            # audioop-lts provides 'audioop' directly
-            from pydub import AudioSegment
+        from pydub import AudioSegment
 
-            if len(audio_segments) == 1:
-                # Single segment, just convert to WAV
-                sound = AudioSegment.from_mp3(audio_segments[0])
-            else:
-                # Multiple segments, concatenate them
-                combined = AudioSegment.empty()
-                for segment_file in audio_segments:
-                    segment = AudioSegment.from_mp3(segment_file)
-                    combined += segment
-                sound = combined
+        combined = AudioSegment.empty()
+        for path in temp_files:
+            combined += AudioSegment.from_mp3(path)
+        combined.export(output_file, format="wav")
+        return {}
 
-            # Export as WAV
-            sound.export(output_file, format="wav")
-
-            # Clean up temporary files
-            for temp_file in audio_segments:
-                if os.path.exists(temp_file):
-                    os.remove(temp_file)
-
-            return {}  # Success
-
-        except Exception as e:
-            # Clean up temporary files
-            for temp_file in audio_segments:
-                if os.path.exists(temp_file):
-                    os.remove(temp_file)
-            return {"error": f"Audio processing failed: {str(e)}"}
-
-    except Exception as e:
-        return {"error": f"Unexpected error in generate_wav_elevenlabs: {str(e)}"}
-
-# Mapping of old TikTok voice IDs to ElevenLabs voice IDs (will be updated when voices are fetched)
-VOICE_MAPPING = {
-    "en_us_006": "default",  # Will be replaced with actual ElevenLabs voice IDs
-    "en_us_001": "default",
-    "en_us_ghostface": "default",
-    "en_us_chewbacca": "default",
-    "en_us_c3po": "default",
-    "en_us_stitch": "default",
-    "en_us_stormtrooper": "default",
-    "en_us_rocket": "default",
-    "en_au_002": "default",
-    "en_au_001": "default",
-    "en_uk_001": "default",
-    "en_female_emotional": "default",
-    "en_female_f08_salut_damour": "default",
-    "en_male_m03_lobby": "default"
-}
-
-def get_elevenlabs_voice_id(tiktok_voice):
-    """
-    Convert TikTok voice ID to ElevenLabs voice ID.
-    For now, this returns a default voice, but can be expanded to map specific voices.
-
-    Args:
-        tiktok_voice (str): Original TikTok voice ID
-
-    Returns:
-        str: ElevenLabs voice ID
-    """
-    # Get the first available voice as default
-    voices_result = get_elevenlabs_voices()
-    if "voices" in voices_result and len(voices_result["voices"]) > 0:
-        return voices_result["voices"][0]["id"]
-
-    # Fallback to a known voice ID (you should replace this with an actual voice ID)
-    return "21m00Tcm4TlvDq8ikWAM"  # Default ElevenLabs voice
+    except requests.RequestException as exc:
+        return {"error": f"Text-to-speech request failed: {exc}"}
+    except Exception as exc:  # pragma: no cover - defensive
+        return {"error": f"ElevenLabs synthesis failed: {exc}"}
+    finally:
+        for path in temp_files:
+            if os.path.exists(path):
+                os.remove(path)

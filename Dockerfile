@@ -1,12 +1,18 @@
-# Use official Python image as the base (3.13 for latest compatibility)
+# Subway Surfers Text-to-Video Generator
+# Python 3.13 slim base. Video composition and caption burning use the system
+# ffmpeg binary (with libass), so no Python video libraries are needed.
+
 FROM python:3.13-slim
 
-# Set the working directory inside the container
 WORKDIR /app
 
-# Install minimal system dependencies for Python packages
-RUN apt-get update && apt-get install -y \
+# System dependencies:
+#  - ffmpeg: audio/video processing + caption burning (libass)
+#  - fonts-dejavu-core: provides "DejaVu Sans" so libass can render captions
+#  - build toolchain + headers: lets any sdist-only deps build on arm64
+RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
+    fonts-dejavu-core \
     curl \
     gcc \
     g++ \
@@ -16,24 +22,25 @@ RUN apt-get update && apt-get install -y \
     libffi-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Set environment variables for ElevenLabs integration
-ENV FLASK_APP=app.py
-ENV DOCKER_ENV=true
-# ELEVENLABS_API_KEY should be passed at runtime via docker run -e
+ENV FLASK_APP=app.py \
+    DOCKER_ENV=true \
+    PYTHONUNBUFFERED=1 \
+    TTS_BACKEND=tiktok
 
-# Copy necessary files to /app
+# Install Python dependencies first for better layer caching.
+COPY requirements-docker.txt .
+RUN pip install --no-cache-dir --upgrade pip --break-system-packages --root-user-action=ignore && \
+    pip install --no-cache-dir -r requirements-docker.txt --break-system-packages --root-user-action=ignore
+
+# Copy the application.
 COPY . /app
 
-# Upgrade pip and install Python dependencies
-RUN pip install --upgrade pip --break-system-packages --root-user-action=ignore
-RUN pip install -r requirements-docker.txt --break-system-packages --root-user-action=ignore
+# Generated videos directory (typically mounted as a volume).
+RUN mkdir -p /app/final_videos && chmod 755 /app/final_videos
 
-# Create directories for generated videos and ensure proper permissions
-RUN mkdir -p /app/final_videos && \
-    chmod 755 /app/final_videos
-
-# Expose the Flask application's default port
 EXPOSE 5000
 
-# Start the Flask application
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+    CMD curl -fsS http://localhost:5000/ || exit 1
+
 CMD ["python", "app.py"]

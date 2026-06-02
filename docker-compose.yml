@@ -1,0 +1,46 @@
+# Subway Surfers Text-to-Video Generator
+#
+# Quick start:
+#   1. Put one or more .mp4 gameplay videos in ./gameplay (mounted at /app/static)
+#   2. docker compose up
+#   3. Open http://localhost:5000
+#
+# The default TTS backend is "tiktok" (no API key needed). Switch backends in
+# the UI, or set TTS_BACKEND below. For accurate caption timing you can enable
+# the optional whisper-asr service (see the "whisper" profile at the bottom).
+
+services:
+  app:
+    image: tebwritescode/subwaysurfers-text20:latest
+    # To build locally instead of pulling, comment out `image:` above and use:
+    # build: .
+    container_name: subwaysurfers-text-multi
+    ports:
+      - "5000:5000"
+    environment:
+      # tiktok | elevenlabs | remote
+      TTS_BACKEND: ${TTS_BACKEND:-tiktok}
+      # Required only for the elevenlabs backend:
+      ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY:-}
+      # Required only for the remote backend:
+      REMOTE_TTS_URL: ${REMOTE_TTS_URL:-}
+      # Optional: accurate word-level caption timing via a whisper-asr server.
+      WHISPER_ASR_URL: ${WHISPER_ASR_URL:-}
+      CAPTION_TIMING_OFFSET: ${CAPTION_TIMING_OFFSET:-0.0}
+    volumes:
+      # Gameplay source clips (a random .mp4 is chosen per video).
+      - ./gameplay:/app/static
+      # Persist generated videos.
+      - ./final_videos:/app/final_videos
+    restart: unless-stopped
+
+  # Optional Whisper ASR server for precise caption timing.
+  # Enable with:  docker compose --profile whisper up
+  # and set WHISPER_ASR_URL=http://whisper-asr:9000
+  whisper-asr:
+    image: onerahmet/openai-whisper-asr-webservice:latest
+    container_name: whisper-asr
+    profiles: ["whisper"]
+    environment:
+      ASR_MODEL: base
+    restart: unless-stopped

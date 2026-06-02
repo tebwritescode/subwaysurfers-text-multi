@@ -5,7 +5,7 @@
 # - MINOR: Features being added
 # - PATCH: Steps during troubleshooting, testing and modifications
 
-__version__ = "1.2.0"
+__version__ = "1.3.0"
 
 # Version history:
 # 1.0.0 - Initial versioning system implementation (based on Docker image v20)
@@ -36,3 +36,8 @@ __version__ = "1.2.0"
 # 1.1.21 - FEATURE: Added support for MODEL_PATH and SOURCE_VIDEO_DIR env vars. SOURCE_VIDEO_DIR now accepts both files and directories
 # 1.1.22 - CLEANUP: Sanitized codebase - removed test outputs, unused scripts, and temporary files
 # 1.2.0 - MAJOR: Replaced TikTok TTS with ElevenLabs API integration, added Python 3.13 compatibility
+# 1.3.0 - MAJOR: Pluggable TTS backends (tiktok/elevenlabs/remote) selectable via TTS_BACKEND env var
+#         and a per-request UI dropdown with backend-specific voices. Fixed startup crash (issue #2),
+#         restored real caption rendering (ffmpeg-burned subtitles, no OpenCV) and text cleaning,
+#         replaced os.system/bash scripts with subprocess (cross-platform + CodeQL-safe), and removed
+#         dead/stub modules (vosk timestamper, opencv videomaker, word_aligner) and unused deps.
