@@ -10,8 +10,8 @@ on:
   workflow_dispatch:
 
 env:
-  REGISTRY: docker.io
-  IMAGE_NAME: tebwritescode/subwaysurfers-text20
+  GHCR_IMAGE: ghcr.io/${{ github.repository_owner }}/subwaysurfers-text20
+  DOCKERHUB_IMAGE: ${{ secrets.DOCKER_USERNAME }}/subwaysurfers-text20
 
 concurrency:
   group: docker-build
@@ -41,11 +41,44 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
+    # GHCR always works using the built-in GITHUB_TOKEN (no extra secrets).
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    # Docker Hub is optional: only used when DOCKER_USERNAME/DOCKER_PASSWORD are set.
+    - name: Check Docker Hub credentials
+      id: dockerhub
+      run: |
+        if [ -n "${{ secrets.DOCKER_USERNAME }}" ] && [ -n "${{ secrets.DOCKER_PASSWORD }}" ]; then
+          echo "enabled=true" >> $GITHUB_OUTPUT
+        else
+          echo "enabled=false" >> $GITHUB_OUTPUT
+          echo "::warning::Docker Hub secrets not set; publishing to GHCR only."
+        fi
+
     - name: Log in to Docker Hub
+      if: steps.dockerhub.outputs.enabled == 'true'
       uses: docker/login-action@v3
       with:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Compute image tags
+      id: tags
+      run: |
+        VERSION="${{ steps.version.outputs.version }}"
+        GHCR="${{ env.GHCR_IMAGE }}"
+        TAGS="${GHCR}:v${VERSION},${GHCR}:latest"
+        if [ "${{ steps.dockerhub.outputs.enabled }}" = "true" ]; then
+          DH="${{ env.DOCKERHUB_IMAGE }}"
+          TAGS="${TAGS},${DH}:v${VERSION},${DH}:latest"
+        fi
+        echo "tags=${TAGS}" >> $GITHUB_OUTPUT
+        echo "Publishing tags: ${TAGS}"
 
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
@@ -53,13 +86,8 @@ jobs:
         context: .
         platforms: linux/amd64,linux/arm64
         push: true
-        tags: |
-          ${{ env.IMAGE_NAME }}:v${{ steps.version.outputs.version }}
-          ${{ env.IMAGE_NAME }}:latest
+        tags: ${{ steps.tags.outputs.tags }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
         build-args: |
           VERSION=${{ steps.version.outputs.version }}
-
-    - name: Image digest
-      run: echo "Image pushed with digest ${{ steps.build.outputs.digest }}"
