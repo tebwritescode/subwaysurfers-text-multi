@@ -6,20 +6,15 @@ FROM python:3.13-slim
 
 WORKDIR /app
 
-# System dependencies:
+# System dependencies (runtime only — every Python dep installs from a wheel,
+# so no compilers/headers are needed; omitting them removes a large CVE surface):
 #  - ffmpeg: audio/video processing + caption burning (libass)
 #  - fonts-dejavu-core: provides "DejaVu Sans" so libass can render captions
-#  - build toolchain + headers: lets any sdist-only deps build on arm64
+#  - curl: container HEALTHCHECK
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     fonts-dejavu-core \
     curl \
-    gcc \
-    g++ \
-    python3-dev \
-    libxml2-dev \
-    libxslt1-dev \
-    libffi-dev \
     && rm -rf /var/lib/apt/lists/*
 
 ENV FLASK_APP=app.py \
