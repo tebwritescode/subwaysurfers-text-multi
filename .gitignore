@@ -5,10 +5,19 @@ __pycache__
 __pycache__/
 *.so
 
-# Output files
+# Secrets / local config
+.env
+.env.local
+
+# Output files and pipeline artifacts
 output*
 final.mp4
 final_videos/*
+section_*.mp4
+section_list.txt
+*.ass
+*.wav
+temp_*
 
 # System files
 .DS_Store

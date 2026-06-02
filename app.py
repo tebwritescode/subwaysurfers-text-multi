@@ -1,306 +1,244 @@
 # app.py
-# -------------
-# Main Flask application for Subway Surfers Text-to-Video Generator.
-# Handles form input, error management, and video streaming with range support.
+# -----------------------------------------------------------------------------
+# Flask web application for the Subway Surfers Text-to-Video Generator.
 #
-# Author: [Your Name]
-# Date: [Update as needed]
-#
-# This script provides a web interface for users to submit text, select voice and speed,
-# and receive a generated video. It includes robust error handling and supports partial
-# video streaming for efficient playback.
+# Provides a web UI to submit text or an article URL, choose a TTS backend and
+# voice, and generate a captioned gameplay video. Generation runs in a
+# background thread with real-time progress over Server-Sent Events.
+# -----------------------------------------------------------------------------
 
-from flask import Flask, render_template, request, Response, stream_with_context, redirect, url_for, flash, send_from_directory
-import os
-from urllib.parse import quote
-import traceback
-import sys
-from sub import script
-from datetime import datetime
-import validators
-from version import __version__
 import json
-import time
-import threading
+import logging
+import os
 import queue
-from elevenlabs_tts import get_elevenlabs_voices
+import sys
+import threading
+import time
+import traceback
+from datetime import datetime
 
-# Initialize Flask application
+import validators
+from dotenv import load_dotenv
+from flask import (Flask, Response, redirect, render_template, request,
+                   send_from_directory, stream_with_context, url_for, flash)
+from werkzeug.utils import secure_filename
+
+# Load .env before importing modules that read configuration at import time.
+load_dotenv()
+
+from sub import script  # noqa: E402
+from text_to_speech import available_backends, list_voices
+from version import __version__
+
 app = Flask(__name__)
-app.secret_key = os.urandom(24)  # Secret key for session-based flash messages
+app.secret_key = os.urandom(24)
 
-# Global progress tracking
-progress_queues = {}  # session_id -> queue for progress updates
-
-# Global error handlers
-@app.errorhandler(500)
-def internal_error(error):
-    app.logger.error(f"Internal server error: {error}")
-    flash("An internal server error occurred. The application is recovering.", "error")
-    return redirect(url_for('home')), 500
-
-@app.errorhandler(404)
-def not_found_error(error):
-    return redirect(url_for('home')), 404
-
-@app.errorhandler(Exception)
-def handle_exception(e):
-    app.logger.error(f"Unhandled exception: {traceback.format_exc()}")
-    flash("An unexpected error occurred. Please try again.", "error")
-    return redirect(url_for('home')), 500
-
-
-class ScriptExecutionError(Exception):
-    """
-    Custom Exception for errors occurring in the sub script.
-    Used to distinguish script-specific errors from general exceptions.
-    """
-    def __init__(self, message):
-        super().__init__(message)
-        self.message = message
+# session_id -> queue of progress updates
+progress_queues = {}
 
 FINAL_VIDEOS_DIR = "final_videos"
 os.makedirs(FINAL_VIDEOS_DIR, exist_ok=True)
 
+
+def safe_video_path(filename):
+    """
+    Resolve ``filename`` to a path inside FINAL_VIDEOS_DIR, or None if the name
+    is unsafe. Guards every file route against path traversal.
+    """
+    name = secure_filename(filename or "")
+    if not name:
+        return None
+    base = os.path.realpath(FINAL_VIDEOS_DIR)
+    full = os.path.realpath(os.path.join(base, name))
+    if os.path.commonpath([base, full]) != base:
+        return None
+    return full
+
+
+# --- API ---------------------------------------------------------------------
+
 @app.route('/api/voices')
 def get_voices():
-    """
-    Return available ElevenLabs voices as JSON.
-    """
+    """Return the available voices for a TTS backend as JSON."""
+    backend = request.args.get('backend')
     try:
-        voices_result = get_elevenlabs_voices()
-        if "error" in voices_result:
-            return {"voices": [], "error": voices_result["error"]}
-        return voices_result
-    except Exception as e:
-        return {"voices": [], "error": str(e)}
+        return list_voices(backend)
+    except Exception as exc:
+        return {"voices": [], "error": str(exc)}
+
+
+# --- Pages -------------------------------------------------------------------
 
 @app.route('/')
 def home():
-    """
-    Render the home page with the input form.
-    """
-    # Get ElevenLabs voices for the dropdown
+    """Render the generation form with TTS backends and the default voice list."""
+    backends = available_backends()
+    default_backend = next((b['id'] for b in backends if b['is_default']), None)
     try:
-        voices_result = get_elevenlabs_voices()
-        elevenlabs_voices = voices_result.get("voices", [])
-        elevenlabs_error = voices_result.get("error", None)
-    except Exception as e:
-        elevenlabs_voices = []
-        elevenlabs_error = str(e)
+        voices_result = list_voices(default_backend)
+    except Exception as exc:
+        voices_result = {"voices": [], "error": str(exc)}
+    return render_template(
+        'index.html',
+        version=__version__,
+        backends=backends,
+        default_backend=default_backend,
+        voices=voices_result.get("voices", []),
+        voices_error=voices_result.get("error"),
+    )
 
-    return render_template('index.html',
-                         version=__version__,
-                         elevenlabs_voices=elevenlabs_voices,
-                         elevenlabs_error=elevenlabs_error)
 
 @app.route('/progress/<session_id>')
 def progress_stream(session_id):
-    """
-    Server-Sent Events endpoint for real-time progress updates.
-    """
+    """Server-Sent Events stream of generation progress for a session."""
     def generate_progress():
         if session_id not in progress_queues:
             yield f"data: {json.dumps({'error': 'Invalid session'})}\n\n"
             return
-            
         progress_queue = progress_queues[session_id]
-        
         while True:
             try:
-                # Wait for progress update with timeout
                 progress_data = progress_queue.get(timeout=30)
-                if progress_data is None:  # Signal to stop
+                if progress_data is None:
                     break
                 yield f"data: {json.dumps(progress_data)}\n\n"
             except queue.Empty:
-                # Keep connection alive with heartbeat
                 yield f"data: {json.dumps({'heartbeat': True})}\n\n"
-            except:
+            except Exception:
                 break
-        
-        # Cleanup
-        if session_id in progress_queues:
-            del progress_queues[session_id]
-    
+        progress_queues.pop(session_id, None)
+
     return Response(generate_progress(), mimetype='text/event-stream', headers={
         'Cache-Control': 'no-cache',
         'Connection': 'keep-alive',
-        'X-Accel-Buffering': 'no'
+        'X-Accel-Buffering': 'no',
     })
+
 
 @app.route('/submit-form', methods=['POST'])
 def submit_form():
-    """
-    Handle form submission, process the input text, and generate video.
-    Validates user input, calls the external script, and manages errors.
-    Redirects to the output page on success, or home page with error messages.
-    """
+    """Validate input and start background video generation."""
     try:
         text_input = request.form['text_input']
 
-        # Validate speed input (must be a float >= 0.5)
         try:
             customspeed = float(request.form.get('speed', 1.0))
-            if customspeed < 0.5:  # Minimum allowed speed
-                flash("Speed too slow. Minimum allowed is 0.5", "error")
+            if customspeed < 0.25:
+                flash("Speed too slow. Minimum allowed is 0.25", "error")
                 return redirect(url_for('home'))
         except ValueError:
             flash("Invalid speed value. Please enter a valid number.", "error")
             return redirect(url_for('home'))
 
-        # Get selected voice, default to 'en_us_006' if not provided
-        customvoice = str(request.form.get('voice', "en_us_006"))
+        backend = request.form.get('backend') or None
+        customvoice = str(request.form.get('voice', "default"))
 
-        # Generate a unique session ID and filename for this run
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        session_id = f"{timestamp}_{customspeed}_{customvoice.replace('/', '_')}"
-        
-        # Add speed and voice to filename for clarity
         safe_voice = customvoice.replace("/", "_")
+        session_id = f"{timestamp}_{customspeed}_{safe_voice}"
         final_filename = f"{timestamp}_speed{customspeed}_voice{safe_voice}_final.mp4"
         final_path = os.path.join(FINAL_VIDEOS_DIR, final_filename)
         text_filename = f"{timestamp}_speed{customspeed}_voice{safe_voice}_final.txt"
         text_path = os.path.join(FINAL_VIDEOS_DIR, text_filename)
 
-        # Save the original text input to a .txt file
-        with open(text_path, "w", encoding="utf-8") as f:
-            f.write(text_input)
+        with open(text_path, "w", encoding="utf-8") as handle:
+            handle.write(text_input)
 
-        # Create progress queue for this session
         progress_queue = queue.Queue()
         progress_queues[session_id] = progress_queue
 
-        def run_script_with_progress():
-            """Run the script in a separate thread with progress updates."""
+        def run_generation():
             try:
-                # Run script with timeout protection using threading
-                start_time = time.time()
-                max_duration = 600  # 10 minutes
-                
-                result = script(text_input, customspeed, customvoice, final_path, progress_queue)
-                
-                # Check if we exceeded maximum time
-                elapsed_time = time.time() - start_time
-                if elapsed_time > max_duration:
-                    app.logger.warning(f"Script completed but took {elapsed_time:.1f} seconds (max: {max_duration})")
-                
+                result = script(text_input, customspeed, customvoice, final_path,
+                                progress_queue, backend=backend)
                 if result and 'error' in result:
                     progress_queue.put({'error': result['error'], 'step': 'error'})
                 else:
-                    progress_queue.put({'progress': 100, 'step': 'completed', 'message': 'Video generation completed!'})
-                    
-            except Exception as e:
-                app.logger.error(f"Script error: {traceback.format_exc()}")
-                # Provide user-friendly error messages
-                error_msg = str(e)
-                if "No such file" in error_msg:
-                    error_msg = "Missing required files. Please check video files and Vosk model."
-                elif "Permission denied" in error_msg:
-                    error_msg = "Permission error. Please check file permissions."
-                elif "Memory" in error_msg or "memory" in error_msg:
-                    error_msg = "Out of memory. Please try with shorter text or restart the application."
-                elif "timeout" in error_msg.lower():
-                    error_msg = "Video generation timed out. Please try with shorter text."
-                else:
-                    error_msg = f"Processing error: {error_msg}"
-                
-                progress_queue.put({'error': error_msg, 'step': 'error'})
+                    progress_queue.put({'progress': 100, 'step': 'completed',
+                                        'message': 'Video generation completed!'})
+            except Exception as exc:
+                app.logger.error("Generation error: %s", traceback.format_exc())
+                progress_queue.put({'error': f"Processing error: {exc}", 'step': 'error'})
             finally:
-                progress_queue.put(None)  # Signal end of stream
+                progress_queue.put(None)
 
-        # Start script in background thread
-        script_thread = threading.Thread(target=run_script_with_progress)
-        script_thread.daemon = True
-        script_thread.start()
+        thread = threading.Thread(target=run_generation, daemon=True)
+        thread.start()
 
-        # If input was a URL, pass it to the output page for a source button
         source_url = text_input if validators.url(text_input) else None
-
-        # Return progress page that will track completion and redirect when done
-        return render_template('progress.html', 
-                             session_id=session_id,
-                             final_filename=final_filename,
-                             textfile=text_filename,
-                             source=source_url,
-                             version=__version__)
-
-    except Exception as e:
-        app.logger.error(f"Unexpected error in submit_form: {traceback.format_exc()}")
-        flash(f"An unexpected error occurred: {str(e)}", "error")
+        return render_template('progress.html',
+                               session_id=session_id,
+                               final_filename=final_filename,
+                               textfile=text_filename,
+                               source=source_url,
+                               version=__version__)
+    except Exception as exc:
+        app.logger.error("submit_form error: %s", traceback.format_exc())
+        flash(f"An unexpected error occurred: {exc}", "error")
         return redirect(url_for('home'))
+
 
 @app.route('/output')
 def output():
-    """
-    Show the generated video in a player with a back arrow.
-    """
+    """Show a generated video in the player."""
     filename = request.args.get('filename')
     textfile = request.args.get('textfile')
     source = request.args.get('source')
-    if not filename:
-        flash("No video specified.", "error")
-        return redirect(url_for('home'))
-    file_path = os.path.join(FINAL_VIDEOS_DIR, filename)
-    if not os.path.exists(file_path):
+    file_path = safe_video_path(filename)
+    if not file_path or not os.path.exists(file_path):
         flash("Video file not found. Please try again.", "error")
         return redirect(url_for('home'))
-    # Defensive: check textfile exists
-    textfile_path = os.path.join(FINAL_VIDEOS_DIR, textfile) if textfile else None
-    if textfile and not os.path.exists(textfile_path):
+    textfile_path = safe_video_path(textfile) if textfile else None
+    if textfile and (not textfile_path or not os.path.exists(textfile_path)):
         textfile = None
-    return render_template('output.html', filename=filename, textfile=textfile, source=source, version=__version__)
+    return render_template('output.html', filename=filename, textfile=textfile,
+                           source=source, version=__version__)
+
 
 @app.route('/viewtext/<textfile>')
 def view_text(textfile):
-    """
-    View the original text used for the video.
-    """
-    file_path = os.path.join(FINAL_VIDEOS_DIR, textfile)
-    if not os.path.exists(file_path):
+    """View the original input text for a video."""
+    file_path = safe_video_path(textfile)
+    if not file_path or not os.path.exists(file_path):
         flash("Text file not found.", "error")
         return redirect(url_for('home'))
-    with open(file_path, "r", encoding="utf-8") as f:
-        content = f.read()
+    with open(file_path, "r", encoding="utf-8") as handle:
+        content = handle.read()
     return render_template("viewtext.html", text=content, textfile=textfile, version=__version__)
+
 
 @app.route('/downloadtext/<textfile>')
 def download_text(textfile):
-    """
-    Download the original text file.
-    """
+    """Download the original input text file."""
     return send_from_directory(FINAL_VIDEOS_DIR, textfile, as_attachment=True)
+
 
 @app.route('/videos')
 def videos():
-    """
-    Basic file browser for all generated videos.
-    """
+    """List all generated videos (the management page)."""
     files = sorted(os.listdir(FINAL_VIDEOS_DIR), reverse=True)
     return render_template('videos.html', files=files, version=__version__)
 
+
 @app.route('/download/<filename>')
 def download(filename):
-    """
-    Download a video file.
-    """
+    """Download a generated video."""
     return send_from_directory(FINAL_VIDEOS_DIR, filename, as_attachment=True)
+
 
 @app.route('/video/<filename>')
 def serve_video(filename):
-    """
-    Stream a video file with range support.
-    """
-    file_path = os.path.join(FINAL_VIDEOS_DIR, filename)
+    """Stream a video file with HTTP range support."""
+    file_path = safe_video_path(filename)
     try:
-        if not os.path.exists(file_path):
+        if not file_path or not os.path.exists(file_path):
             flash("Video file not found. Please try again.", "error")
             return redirect(url_for('home'))
         file_size = os.path.getsize(file_path)
         range_header = request.headers.get('Range', None)
         if not range_header:
-            with open(file_path, 'rb') as f:
-                return Response(f.read(), mimetype='video/mp4')
+            with open(file_path, 'rb') as handle:
+                return Response(handle.read(), mimetype='video/mp4')
         try:
             start, end = range_header.strip().lower().split('bytes=')[1].split('-')
             start = int(start)
@@ -308,84 +246,75 @@ def serve_video(filename):
         except (ValueError, IndexError):
             start, end = 0, file_size - 1
         length = end - start + 1
+
         def generate_chunk():
             with open(file_path, 'rb') as video_file:
                 video_file.seek(start)
-                chunk_size = 4096
                 remaining = length
                 while remaining > 0:
-                    chunk = video_file.read(min(chunk_size, remaining))
+                    chunk = video_file.read(min(4096, remaining))
                     if not chunk:
                         break
                     yield chunk
                     remaining -= len(chunk)
+
         return Response(
             stream_with_context(generate_chunk()),
             status=206,
             mimetype='video/mp4',
             headers={
                 'Content-Range': f'bytes {start}-{end}/{file_size}',
-                'Accept-Ranges': 'bytes'
-            }
+                'Accept-Ranges': 'bytes',
+            },
         )
-    except Exception as e:
-        app.logger.error(f"Error in output: {traceback.format_exc()}")
+    except Exception:
+        app.logger.error("serve_video error: %s", traceback.format_exc())
         flash("Error streaming video. Please try again.", "error")
         return redirect(url_for('home'))
 
+
 @app.route('/delete/<filename>', methods=['POST'])
 def delete_video(filename):
-    """
-    Delete a video file and redirect to the videos page.
-    """
-    file_path = os.path.join(FINAL_VIDEOS_DIR, filename)
+    """Delete a generated video (and is referenced by the management page)."""
+    file_path = safe_video_path(filename)
     try:
-        if os.path.exists(file_path):
+        if file_path and os.path.exists(file_path):
             os.remove(file_path)
-            flash(f"Deleted {filename}", "info")
+            flash(f"Deleted {secure_filename(filename)}", "info")
         else:
             flash("File not found.", "error")
-    except Exception as e:
-        app.logger.error(f"Error deleting video: {traceback.format_exc()}")
+    except Exception:
+        app.logger.error("delete_video error: %s", traceback.format_exc())
         flash("Error deleting video.", "error")
     return redirect(url_for('videos'))
 
 
-# Global error handlers
+# --- Error handlers ----------------------------------------------------------
+
 @app.errorhandler(404)
-def page_not_found(e):
-    """
-    Handle 404 Not Found errors by redirecting to the home page with a flash message.
-    """
-    flash("Page not found", "error")
-    return redirect(url_for('home'))
+def not_found_error(error):
+    return redirect(url_for('home')), 404
+
 
 @app.errorhandler(500)
-def server_error(e):
-    """
-    Handle 500 Internal Server Error by redirecting to the home page with a flash message.
-    """
-    flash("Internal server error. Please try again later.", "error")
-    return redirect(url_for('home'))
+def internal_error(error):
+    app.logger.error("Internal server error: %s", error)
+    flash("An internal server error occurred. Please try again.", "error")
+    return redirect(url_for('home')), 500
+
 
 @app.errorhandler(Exception)
-def handle_unexpected_exception(e):
-    """
-    Catch-all handler for any unhandled exceptions, logs the error, and redirects to home.
-    """
-    app.logger.error(f"Unhandled exception: {traceback.format_exc()}")
-    flash(f"An unexpected error occurred: {str(e)}", "error")
-    return redirect(url_for('home'))
+def handle_exception(error):
+    app.logger.error("Unhandled exception: %s", traceback.format_exc())
+    flash(f"An unexpected error occurred: {error}", "error")
+    return redirect(url_for('home')), 500
 
 
 if __name__ == '__main__':
-    # Configure logging for error tracking
-    import logging
     logging.basicConfig(
-        level=logging.ERROR,
+        level=logging.INFO,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[logging.StreamHandler(sys.stdout)]
+        handlers=[logging.StreamHandler(sys.stdout)],
     )
-    # Start the Flask app with proper host binding  
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, threaded=True, debug=False)

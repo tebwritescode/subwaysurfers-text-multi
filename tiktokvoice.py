@@ -1,187 +1,184 @@
-# author: Giorgio
-# date: 26.03.2024
-# topic: TikTok-Voice-TTS
-# version: 1.2
-import requests, base64, re, sys
+# TikTok text-to-speech backend.
+#
+# Uses free public TikTok-TTS relay endpoints (no API key required). Based on
+# the community "TikTok-Voice-TTS" project (author: Giorgio), trimmed to a
+# server/Docker context and wrapped with helpers used by the TTS dispatcher.
+
+import base64
+import logging
+import os
+import re
 from threading import Thread
 
-# Optional playsound import (not needed in Docker/server environments)
-try:
-    from playsound import playsound
-    PLAYSOUND_AVAILABLE = True
-except ImportError:
-    PLAYSOUND_AVAILABLE = False
-    def playsound(*args, **kwargs):
-        pass  # No-op when playsound is not available
+import requests
 
-# define the endpoint data with URLs and corresponding response keys
+logger = logging.getLogger(__name__)
+
+# Public relay endpoints with their respective base64 response keys. They are
+# tried in order until one succeeds.
 ENDPOINT_DATA = [
-    {
-        "url": "https://tiktok-tts.weilnet.workers.dev/api/generation",
-        "response": "data"
-    },
-    {
-        "url": "https://countik.com/api/text/speech",
-        "response": "v_data"
-    },
-    {
-        "url": "https://gesserit.co/api/tiktok-tts",
-        "response": "base64"
-    }
+    {"url": "https://tiktok-tts.weilnet.workers.dev/api/generation", "response": "data"},
+    {"url": "https://countik.com/api/text/speech", "response": "v_data"},
+    {"url": "https://gesserit.co/api/tiktok-tts", "response": "base64"},
 ]
 
-# define available voices for text-to-speech conversion
-VOICES = [
-    # DISNEY VOICES
-    'en_us_ghostface',            # Ghost Face
-    'en_us_chewbacca',            # Chewbacca
-    'en_us_c3po',                 # C3PO
-    'en_us_stitch',               # Stitch
-    'en_us_stormtrooper',         # Stormtrooper
-    'en_us_rocket',               # Rocket
-    # ENGLISH VOICES
-    'en_au_001',                  # English AU - Female
-    'en_au_002',                  # English AU - Male
-    'en_uk_001',                  # English UK - Male 1
-    'en_uk_003',                  # English UK - Male 2
-    'en_us_001',                  # English US - Female (Int. 1)
-    'en_us_002',                  # English US - Female (Int. 2)
-    'en_us_006',                  # English US - Male 1
-    'en_us_007',                  # English US - Male 2
-    'en_us_009',                  # English US - Male 3
-    'en_us_010',                  # English US - Male 4
-    # EUROPE VOICES
-    'fr_001',                     # French - Male 1
-    'fr_002',                     # French - Male 2
-    'de_001',                     # German - Female
-    'de_002',                     # German - Male
-    'es_002',                     # Spanish - Male
-    # AMERICA VOICES
-    'es_mx_002',                  # Spanish MX - Male
-    'br_001',                     # Portuguese BR - Female 1
-    'br_003',                     # Portuguese BR - Female 2
-    'br_004',                     # Portuguese BR - Female 3
-    'br_005',                     # Portuguese BR - Male
-    # ASIA VOICES
-    'id_001',                     # Indonesian - Female
-    'jp_001',                     # Japanese - Female 1
-    'jp_003',                     # Japanese - Female 2
-    'jp_005',                     # Japanese - Female 3
-    'jp_006',                     # Japanese - Male
-    'kr_002',                     # Korean - Male 1
-    'kr_003',                     # Korean - Female
-    'kr_004',                     # Korean - Male 2
-    # SINGING VOICES
-    'en_female_f08_salut_damour',  # Alto
-    'en_male_m03_lobby',           # Tenor
-    'en_female_f08_warmy_breeze',  # Warmy Breeze
-    'en_male_m03_sunshine_soon',   # Sunshine Soon
-    # OTHER
-    'en_male_narration',           # narrator
-    'en_male_funny',               # wacky
-    'en_female_emotional',         # peaceful
-]
+# Available voices with human-friendly labels for the UI dropdown.
+VOICE_LABELS = {
+    # Disney / character voices
+    "en_us_ghostface": "Ghost Face", "en_us_chewbacca": "Chewbacca",
+    "en_us_c3po": "C-3PO", "en_us_stitch": "Stitch",
+    "en_us_stormtrooper": "Stormtrooper", "en_us_rocket": "Rocket",
+    # English
+    "en_au_001": "English AU - Female", "en_au_002": "English AU - Male",
+    "en_uk_001": "English UK - Male 1", "en_uk_003": "English UK - Male 2",
+    "en_us_001": "English US - Female 1", "en_us_002": "English US - Female 2",
+    "en_us_006": "English US - Male 1", "en_us_007": "English US - Male 2",
+    "en_us_009": "English US - Male 3", "en_us_010": "English US - Male 4",
+    # Europe
+    "fr_001": "French - Male 1", "fr_002": "French - Male 2",
+    "de_001": "German - Female", "de_002": "German - Male", "es_002": "Spanish - Male",
+    # Americas
+    "es_mx_002": "Spanish MX - Male", "br_001": "Portuguese BR - Female 1",
+    "br_003": "Portuguese BR - Female 2", "br_004": "Portuguese BR - Female 3",
+    "br_005": "Portuguese BR - Male",
+    # Asia
+    "id_001": "Indonesian - Female", "jp_001": "Japanese - Female 1",
+    "jp_003": "Japanese - Female 2", "jp_005": "Japanese - Female 3",
+    "jp_006": "Japanese - Male", "kr_002": "Korean - Male 1",
+    "kr_003": "Korean - Female", "kr_004": "Korean - Male 2",
+    # Singing
+    "en_female_f08_salut_damour": "Singing - Alto",
+    "en_male_m03_lobby": "Singing - Tenor",
+    "en_female_f08_warmy_breeze": "Singing - Warmy Breeze",
+    "en_male_m03_sunshine_soon": "Singing - Sunshine Soon",
+    # Other
+    "en_male_narration": "Narrator", "en_male_funny": "Wacky",
+    "en_female_emotional": "Peaceful",
+}
+VOICES = list(VOICE_LABELS.keys())
+DEFAULT_VOICE = "en_us_006"
 
-# define the text-to-speech function
-def tts(text: str, voice: str, output_filename: str = "output.mp3", play_sound: bool = False) -> None:
-    # specified voice is valid
-    if not voice in VOICES:
-        raise ValueError("voice must be valid")
-    # text is not empty
+
+class TikTokTTSError(Exception):
+    """Raised when none of the TikTok relay endpoints could synthesize audio."""
+
+
+def list_tiktok_voices():
+    """Return the TikTok voices in the dispatcher's voice schema."""
+    voices = [
+        {"id": vid, "name": label, "category": "tiktok"}
+        for vid, label in VOICE_LABELS.items()
+    ]
+    return {"voices": voices}
+
+
+def _split_text(text, limit=300):
+    """Split text into <= ``limit`` character chunks on punctuation/word boundaries."""
+    separated = re.findall(r".*?[.,!?:;-]|.+", text)
+
+    bounded = []
+    for chunk in separated:
+        if len(chunk) <= limit:
+            bounded.append(chunk)
+            continue
+        current = ""
+        for word in chunk.split(" "):
+            if len(current) + len(word) + 1 <= limit:
+                current = f"{current} {word}".strip()
+            else:
+                bounded.append(current)
+                current = word
+        if current:
+            bounded.append(current)
+
+    merged, current = [], ""
+    for chunk in bounded:
+        if len(current) + len(chunk) <= limit:
+            current += chunk
+        else:
+            merged.append(current)
+            current = chunk
+    merged.append(current)
+    return merged
+
+
+def tts(text, voice, output_filename="output.mp3"):
+    """
+    Synthesize ``text`` with ``voice`` to an MP3 file via a TikTok relay.
+
+    Raises:
+        ValueError: invalid voice or empty text.
+        TikTokTTSError: all relay endpoints failed.
+    """
+    if voice not in VOICES:
+        raise ValueError(f"Invalid TikTok voice: {voice}")
     if not text:
-        raise ValueError("text must not be 'None'")
-    # split the text into chunks
-    chunks: list[str] = _split_text(text)
-    for entry in ENDPOINT_DATA:
-        endpoint_valid: bool = True
-        # empty list to store the data from the reqeusts
-        audio_data: list[str] = ["" for i in range(len(chunks))]
-        # generate audio for each chunk in a separate thread
-        def generate_audio_chunk(index: int, chunk: str) -> None:
-            nonlocal endpoint_valid
-            if not endpoint_valid: return
+        raise ValueError("text must not be empty")
+
+    chunks = _split_text(text)
+
+    for endpoint in ENDPOINT_DATA:
+        audio_data = ["" for _ in chunks]
+        endpoint_ok = True
+
+        def fetch(index, chunk):
+            nonlocal endpoint_ok
+            if not endpoint_ok:
+                return
             try:
-                # request to the endpoint to generate audio for the chunk
                 response = requests.post(
-                    entry["url"],
-                    json={
-                        "text": chunk,
-                        "voice": voice
-                    }
+                    endpoint["url"], json={"text": chunk, "voice": voice}, timeout=30
                 )
-                if response.status_code == 200:
-                    # store the audio data for the chunk
-                    audio_data[index] = response.json()[entry["response"]]
-                else:
-                    endpoint_valid = False
-            except requests.RequestException as e:
-                print(f"Error: {e}")
-                sys.exit()
-        # start threads for generating audio for each chunk
-        threads: list[Thread] = []
-        for index, chunk in enumerate(chunks):
-            thread: Thread = Thread(target=generate_audio_chunk, args=(index, chunk))
-            threads.append(thread)
+            except requests.RequestException as exc:
+                logger.warning("TikTok endpoint %s failed: %s", endpoint["url"], exc)
+                endpoint_ok = False
+                return
+            if response.status_code == 200:
+                audio_data[index] = response.json()[endpoint["response"]]
+            else:
+                endpoint_ok = False
+
+        threads = [Thread(target=fetch, args=(i, c)) for i, c in enumerate(chunks)]
+        for thread in threads:
             thread.start()
-        # wait for all threads to finish
         for thread in threads:
             thread.join()
-        if not endpoint_valid: continue
-        # concatenate audio data from all chunks and decode from base64
-        audio_bytes = base64.b64decode("".join(audio_data))
-        # write the audio data to a file
-        with open(output_filename, "wb") as file:
-            file.write(audio_bytes)
-            print(f"File '{output_filename}' has been generated successfully.")
-        # play the audio if specified
-        if (play_sound) :
-            playsound(output_filename)
-        # break after processing a valid endpoint
-        break
 
-# define a function to split the text into chunks of maximum 300 characters or less
-def _split_text(text: str) -> list[str]:
-    # empty list to store merged chunks
-    merged_chunks: list[str] = []
-    # split the text into chunks based on punctuation marks
-    # change the regex [.,!?:;-] to add more seperation points
-    seperated_chunks: list[str] = re.findall(r'.*?[.,!?:;-]|.+', text)
-    
-    # iterate through the chunks to check for their lengths
-    new_chunks = []
-    for chunk in seperated_chunks:
-        if len(chunk) > 300:
-            # Split chunk safely using words instead of regex
-            words = chunk.split(" ")
-            current_part = ""
-            
-            for word in words:
-                if len(current_part) + len(word) + 1 <= 300:  # +1 for space
-                    if current_part:
-                        current_part += " " + word
-                    else:
-                        current_part = word
-                else:
-                    new_chunks.append(current_part)
-                    current_part = word
-            
-            if current_part:
-                new_chunks.append(current_part)
-        else:
-            new_chunks.append(chunk)
-    
-    seperated_chunks = new_chunks
-    
-    # initialize an empty string to hold the merged chunk
-    merged_chunk: str = ""
-    for seperated_chunk in seperated_chunks:
-        # check if adding the current chunk would exceed the limit of 300 characters
-        if len(merged_chunk) + len(seperated_chunk) <= 300:
-            merged_chunk += seperated_chunk
-        else:
-            # start a new merged chunk
-            merged_chunks.append(merged_chunk)
-            merged_chunk = seperated_chunk
-    # append the last merged chunk to the list
-    merged_chunks.append(merged_chunk)
-    return merged_chunks
+        if not endpoint_ok or not all(audio_data):
+            continue
+
+        with open(output_filename, "wb") as handle:
+            handle.write(base64.b64decode("".join(audio_data)))
+        logger.info("TikTok TTS generated %s via %s", output_filename, endpoint["url"])
+        return
+
+    raise TikTokTTSError("All TikTok TTS endpoints failed")
+
+
+def generate_wav_tiktok(text, voice, output_file):
+    """
+    Synthesize ``text`` to a WAV file using TikTok voices.
+
+    Returns:
+        dict: {} on success, {"error": "..."} on failure.
+    """
+    text = (text or "").strip()
+    if not text:
+        return {"error": "No text content to process"}
+    if not voice or voice == "default":
+        voice = DEFAULT_VOICE
+
+    temp_mp3 = "temp_tiktok.mp3"
+    try:
+        tts(text, voice, temp_mp3)
+        from pydub import AudioSegment
+
+        AudioSegment.from_mp3(temp_mp3).export(output_file, format="wav")
+        return {}
+    except (ValueError, TikTokTTSError) as exc:
+        return {"error": str(exc)}
+    except Exception as exc:  # pragma: no cover - defensive
+        return {"error": f"TikTok synthesis failed: {exc}"}
+    finally:
+        if os.path.exists(temp_mp3):
+            os.remove(temp_mp3)

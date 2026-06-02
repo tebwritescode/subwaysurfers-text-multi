@@ -1,69 +1,68 @@
-#!/usr/bin/env python3
 """
-Simple test application to demonstrate ElevenLabs integration
+Lightweight offline tests for the core modules.
+
+These avoid network access and external services so they can run in CI. Run
+with: ``python -m pytest test_app.py`` (or just ``python test_app.py``).
 """
 
-from flask import Flask, render_template, jsonify
-from elevenlabs_tts import get_elevenlabs_voices
-import os
+import captions
+import text_to_speech
+from cleantext import cleantext
+from content import is_url
+from sub import _atempo_chain
+from text_splitter import split_text_into_sections
 
-app = Flask(__name__)
 
-@app.route('/')
-def home():
-    """Test page showing ElevenLabs integration status"""
-    try:
-        voices_result = get_elevenlabs_voices()
-        elevenlabs_voices = voices_result.get("voices", [])
-        elevenlabs_error = voices_result.get("error", None)
-    except Exception as e:
-        elevenlabs_voices = []
-        elevenlabs_error = str(e)
+def test_backends_registered():
+    ids = {b["id"] for b in text_to_speech.available_backends()}
+    assert ids == {"tiktok", "elevenlabs", "remote"}
 
-    return f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>SubwaySurfers ElevenLabs Integration Test</title>
-        <style>
-            body {{ font-family: Arial, sans-serif; margin: 40px; }}
-            .success {{ color: green; }}
-            .error {{ color: red; }}
-            .voice-list {{ margin: 20px 0; }}
-            .voice-item {{ margin: 5px 0; padding: 5px; background: #f0f0f0; }}
-        </style>
-    </head>
-    <body>
-        <h1>SubwaySurfers ElevenLabs Integration Test</h1>
 
-        <h2>Integration Status:</h2>
-        {"<p class='error'>❌ " + elevenlabs_error + "</p>" if elevenlabs_error else "<p class='success'>✅ ElevenLabs API connection successful!</p>"}
+def test_resolve_backend_falls_back():
+    assert text_to_speech.resolve_backend("nonsense") == text_to_speech.DEFAULT_BACKEND
+    assert text_to_speech.resolve_backend("elevenlabs") == "elevenlabs"
 
-        <h2>Available Voices:</h2>
-        <div class="voice-list">
-            {"".join([f"<div class='voice-item'>🎤 {voice['name']} (ID: {voice['id']})</div>" for voice in elevenlabs_voices]) if elevenlabs_voices else "<p>No voices available</p>"}
-        </div>
 
-        <h2>Environment:</h2>
-        <p>ELEVENLABS_API_KEY configured: {'✅ Yes' if os.getenv('ELEVENLABS_API_KEY') and os.getenv('ELEVENLABS_API_KEY') != 'your_elevenlabs_api_key_here' else '❌ No'}</p>
+def test_is_url():
+    assert is_url("https://example.com/article")
+    assert not is_url("just some plain text")
 
-        <h2>Next Steps:</h2>
-        <ol>
-            <li>Add your ElevenLabs API key to the .env file</li>
-            <li>Install missing dependencies for full video generation pipeline</li>
-            <li>Test video generation with ElevenLabs voices</li>
-        </ol>
-    </body>
-    </html>
-    """
 
-@app.route('/api/voices')
-def api_voices():
-    """API endpoint for voices"""
-    try:
-        return get_elevenlabs_voices()
-    except Exception as e:
-        return {"voices": [], "error": str(e)}
+def test_cleantext_removes_urls():
+    assert "http" not in cleantext("See https://example.com for details now.")
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5002, debug=True)
+
+def test_split_sections_non_empty():
+    sections = split_text_into_sections("word " * 500)
+    assert sections and all(sections)
+
+
+def test_estimate_word_timings_monotonic():
+    timings = captions.estimate_word_timings("one two three four", 8.0)
+    assert len(timings) == 4
+    assert timings[0][1] == 0.0
+    assert timings[-1][2] <= 8.0 + 1e-6
+    starts = [t[1] for t in timings]
+    assert starts == sorted(starts)
+
+
+def test_atempo_chain_handles_extremes():
+    assert _atempo_chain(1.0) == "atempo=1.0000"
+    # 3.0 and 0.25 are outside a single atempo's 0.5-2.0 range -> chained.
+    assert _atempo_chain(3.0).count("atempo=") >= 2
+    assert _atempo_chain(0.25).count("atempo=") >= 2
+
+
+if __name__ == "__main__":
+    import sys
+
+    failures = 0
+    for name, fn in sorted(globals().items()):
+        if name.startswith("test_") and callable(fn):
+            try:
+                fn()
+                print(f"PASS {name}")
+            except AssertionError as exc:
+                failures += 1
+                print(f"FAIL {name}: {exc}")
+    sys.exit(1 if failures else 0)

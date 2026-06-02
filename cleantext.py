@@ -1,12 +1,7 @@
 import re
-def cleantext_disabled(text):
-    """TEMPORARILY DISABLED - returns text unchanged for testing"""
-    return text
 
-# Temporarily use disabled version for testing
-cleantext = cleantext_disabled
 
-def cleantext_original(text):
+def cleantext(text):
     """
     Clean text by replacing elements not suitable for TTS with descriptions.
     Ensures that duplicate placeholders are merged into a single instance.
