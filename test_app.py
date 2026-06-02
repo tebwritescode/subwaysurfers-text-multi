@@ -8,7 +8,7 @@ with: ``python -m pytest test_app.py`` (or just ``python test_app.py``).
 import captions
 import text_to_speech
 from cleantext import cleantext
-from content import is_url
+from content import is_safe_public_url, is_url
 from sub import _atempo_chain
 from text_splitter import split_text_into_sections
 
@@ -44,6 +44,14 @@ def test_estimate_word_timings_monotonic():
     assert timings[-1][2] <= 8.0 + 1e-6
     starts = [t[1] for t in timings]
     assert starts == sorted(starts)
+
+
+def test_ssrf_guard_blocks_internal_targets():
+    # Non-public / non-http(s) targets must be rejected (SSRF protection).
+    for bad in ("http://127.0.0.1/", "http://169.254.169.254/latest/meta-data/",
+                "http://10.0.0.5/", "http://192.168.1.1/", "http://[::1]/",
+                "file:///etc/passwd", "ftp://example.com/", "not-a-url"):
+        assert not is_safe_public_url(bad), bad
 
 
 def test_atempo_chain_handles_extremes():
