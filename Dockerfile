@@ -35,8 +35,12 @@ RUN pip install --no-cache-dir --upgrade pip --break-system-packages --root-user
 # Copy the application.
 COPY . /app
 
-# Generated videos directory (typically mounted as a volume).
-RUN mkdir -p /app/final_videos && chmod 755 /app/final_videos
+# Run as an unprivileged user. /app must be writable because the pipeline writes
+# transient audio/subtitle/section files to the working directory.
+RUN mkdir -p /app/final_videos && \
+    useradd --create-home --uid 10001 appuser && \
+    chown -R appuser:appuser /app
+USER appuser
 
 EXPOSE 5000
 
