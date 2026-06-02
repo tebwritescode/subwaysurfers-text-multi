@@ -60,8 +60,12 @@ jobs:
           echo "::warning::Docker Hub secrets not set; publishing to GHCR only."
         fi
 
+    # Non-fatal: a missing/invalid Docker Hub secret must never fail the build
+    # (it only means we publish to GHCR alone).
     - name: Log in to Docker Hub
+      id: dockerhub_login
       if: steps.dockerhub.outputs.enabled == 'true'
+      continue-on-error: true
       uses: docker/login-action@v3
       with:
         username: ${{ secrets.DOCKER_USERNAME }}
@@ -73,9 +77,11 @@ jobs:
         VERSION="${{ steps.version.outputs.version }}"
         GHCR="${{ env.GHCR_IMAGE }}"
         TAGS="${GHCR}:v${VERSION},${GHCR}:latest"
-        if [ "${{ steps.dockerhub.outputs.enabled }}" = "true" ]; then
+        if [ "${{ steps.dockerhub_login.outcome }}" = "success" ]; then
           DH="${{ env.DOCKERHUB_IMAGE }}"
           TAGS="${TAGS},${DH}:v${VERSION},${DH}:latest"
+        else
+          echo "::warning::Docker Hub login unavailable; publishing to GHCR only."
         fi
         echo "tags=${TAGS}" >> $GITHUB_OUTPUT
         echo "Publishing tags: ${TAGS}"
